@@ -11,10 +11,10 @@ from django.views.generic.edit import CreateView, FormView, UpdateView
 from guardian.decorators import permission_required as object_permission_required
 
 from tcms.core.forms import SimpleCommentForm
+from tcms.dao.management.priority_dao import priority_dao
+from tcms.dao.testcases.test_case_status_dao import test_case_status_dao
 from tcms.dao.testplans.test_plan_dao import test_plan_dao
 from tcms.dao.testruns.test_run_dao import test_run_dao
-from tcms.management.models import Priority
-from tcms.testcases.models import TestCaseStatus
 from tcms.testplans.forms import (
     ClonePlanForm,
     NewPlanForm,
@@ -132,8 +132,8 @@ class TestPlanGetView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["statuses"] = TestCaseStatus.objects.all()
-        context["priorities"] = Priority.objects.filter(is_active=True)
+        context["statuses"] = test_case_status_dao.filter_objects({})
+        context["priorities"] = priority_dao.filter_objects({"is_active": True})
         context["comment_form"] = SimpleCommentForm()
         context["test_runs"] = test_run_dao.filter_objects(
             plan_id=self.object.pk, stop_date__isnull=True

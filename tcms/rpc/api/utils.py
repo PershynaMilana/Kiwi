@@ -4,7 +4,7 @@
 
 from django.utils.module_loading import import_string
 
-from tcms.testcases.models import BugSystem
+from tcms.dao.testcases.bug_system_dao import bug_system_dao
 
 
 def tracker_from_url(url, request):
@@ -13,7 +13,7 @@ def tracker_from_url(url, request):
     where ``base_url`` is part of ``url``. Usually we pass
     URLs to pre-existing defects to this method.
     """
-    for bug_system in BugSystem.objects.all():
+    for bug_system in bug_system_dao.filter_objects({}):
         if bug_system.base_url and url.startswith(bug_system.base_url):
             return import_string(bug_system.tracker_type)(bug_system, request)
 

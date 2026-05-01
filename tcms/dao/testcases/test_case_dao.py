@@ -29,21 +29,16 @@ _TEST_CASE_FIELDS = (
 
 class TestCaseDAO:
     def __init__(self):
-        # new storage: maps case_id (int) -> case dict
         self._store = {}
-        # new storage for components: case_id -> set of component PKs
-        self._components = {}
-        # new storage for notification CC: case_id -> list of emails
-        self._notification_cc = {}
+        # junction collection: relation_type -> list of {entity1_id, entity2_id, ...}
+        self._relations_store = {}
 
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
 
     def _to_dict(self, case):
-        """Convert a TestCase object to a plain dict with public fields."""
         result = {field: getattr(case, field) for field in _TEST_CASE_FIELDS}
-        # store PKs, not related objects
         result["case_status"] = case.case_status_id
         result["category"] = case.category_id
         result["priority"] = case.priority_id
@@ -53,7 +48,6 @@ class TestCaseDAO:
         result["expected_duration"] = (
             (case.setup_duration or timedelta(0)) + (case.testing_duration or timedelta(0))
         )
-        # Fetch related names via DB query to match filter() output exactly (bypasses translation)
         extra = TestCase.objects.filter(pk=case.pk).values(
             "case_status__name", "category__name", "priority__value",
             "author__username", "default_tester__username", "reviewer__username",
@@ -62,13 +56,31 @@ class TestCaseDAO:
         return result
 
     def _compare(self, old, new, operation):
-        """Log whether old and new storage returned the same result."""
         if old != new:
             print(f"[TestCaseDAO] MISMATCH in '{operation}':")
             print(f"  OLD: {old}")
             print(f"  NEW: {new}")
         else:
             print(f"[TestCaseDAO] OK '{operation}': results match")
+
+    def _add_relation(self, collection, entry):
+        if collection not in self._relations_store:
+            self._relations_store[collection] = []
+        if entry not in self._relations_store[collection]:
+            self._relations_store[collection].append(entry)
+
+    def _remove_relation(self, collection, match):
+        if collection in self._relations_store:
+            self._relations_store[collection] = [
+                r for r in self._relations_store[collection]
+                if not all(r.get(k) == v for k, v in match.items())
+            ]
+
+    def _get_relations(self, collection, match):
+        return [
+            r for r in self._relations_store.get(collection, [])
+            if all(r.get(k) == v for k, v in match.items())
+        ]
 
     # ------------------------------------------------------------------
     # READ operations
@@ -79,7 +91,6 @@ class TestCaseDAO:
         Return a list of test case dicts matching query.
         Used by the TestCase.filter RPC endpoint.
         """
-        # OLD storage
         old_result = list(
             TestCase.objects.annotate(
                 expected_duration=Coalesce("setup_duration", timedelta(0))
@@ -100,9 +111,7 @@ class TestCaseDAO:
             .distinct()
         )
 
-        # NEW storage - only cases previously written through DAO
         new_result = [self._store[c["id"]] for c in old_result if c["id"] in self._store]
-
         if new_result:
             old_subset = [c for c in old_result if c["id"] in self._store]
             self._compare(old_subset, new_result, "filter")
@@ -112,21 +121,14 @@ class TestCaseDAO:
         return old_result
 
     def filter_objects(self, **kwargs):
-        """
-        Return a TestCase queryset for use in views and templates.
-        """
+        """Return a TestCase queryset for use in views and templates."""
         return TestCase.objects.filter(**kwargs)
 
     def get_by_id(self, case_id):
-        """
-        Return a single TestCase object by primary key.
-        """
-        # OLD storage
+        """Return a single TestCase object by primary key."""
         old_result = TestCase.objects.get(pk=case_id)
 
-        # NEW storage
         new_result = self._store.get(case_id)
-
         if new_result is not None:
             self._compare(self._to_dict(old_result), new_result, "get_by_id")
         else:
@@ -139,7 +141,6 @@ class TestCaseDAO:
         Return history records for the given test case.
         Used by the TestCase.history RPC endpoint.
         """
-        # OLD storage (history is append-only; no new storage comparison needed)
         old_result = list(case.history.filter(**query).values())
         print(f"[TestCaseDAO] history: case id={case.pk}, {len(old_result)} record(s)")
         return old_result
@@ -149,10 +150,8 @@ class TestCaseDAO:
         Return {str(case_id): sortkey} mapping for TestCasePlan records.
         Used by the TestCase.sortkeys RPC endpoint.
         """
-        # OLD storage
         result = {}
         for record in TestCasePlan.objects.filter(**query):
-            # NOTE: convert to str() to keep XML-RPC compatibility
             result[str(record.case_id)] = record.sortkey
 
         print(f"[TestCaseDAO] sortkeys: {len(result)} record(s)")
@@ -163,13 +162,12 @@ class TestCaseDAO:
         Return notification CC list for the given test case.
         Used by the TestCase.get_notification_cc RPC endpoint.
         """
-        # OLD storage
         old_result = case.emailing.get_cc_list()
 
-        # NEW storage
-        new_result = self._notification_cc.get(case.pk)
-        if new_result is not None:
-            self._compare(old_result, sorted(new_result), "get_notification_cc")
+        new_relations = self._get_relations("testcase_notification_cc", {"testcase_id": case.pk})
+        if new_relations:
+            new_emails = sorted(r["email"] for r in new_relations)
+            self._compare(sorted(old_result), new_emails, "get_notification_cc")
         else:
             print(f"[TestCaseDAO] get_notification_cc: case id={case.pk} not in new storage yet - skipping comparison")
 
@@ -184,15 +182,12 @@ class TestCaseDAO:
         Persist a TestCase object.
         Used by TestCase.create and TestCase.update RPC endpoints.
         """
-        # OLD storage
         if update_fields:
             case.save(update_fields=update_fields)
         else:
             case.save()
 
-        # NEW storage - store the current state of the case
         self._store[case.pk] = self._to_dict(case)
-
         print(f"[TestCaseDAO] save: synced case id={case.pk} to new storage")
         return case
 
@@ -201,10 +196,7 @@ class TestCaseDAO:
         Delete TestCase objects matching query.
         Used by TestCase.remove RPC endpoint.
         """
-        # OLD storage
         deleted = TestCase.objects.filter(**query).delete()
-
-        # NEW storage - remove deleted cases from _store (best effort)
         print(f"[TestCaseDAO] remove: deleted {deleted[0]} case(s)")
         return deleted
 
@@ -213,14 +205,11 @@ class TestCaseDAO:
         Add a component to the given test case.
         Used by the TestCase.add_component RPC endpoint.
         """
-        # OLD storage
         case.add_component(component_obj)
-
-        # NEW storage
-        if case.pk not in self._components:
-            self._components[case.pk] = set()
-        self._components[case.pk].add(component_obj.pk)
-
+        self._add_relation(
+            "testcase_component",
+            {"testcase_id": case.pk, "component_id": component_obj.pk},
+        )
         print(f"[TestCaseDAO] add_component: added component id={component_obj.pk} to case id={case.pk}")
         return model_to_dict(component_obj)
 
@@ -229,13 +218,11 @@ class TestCaseDAO:
         Remove a component from the given test case.
         Used by the TestCase.remove_component RPC endpoint.
         """
-        # OLD storage
         case.remove_component(component_obj)
-
-        # NEW storage
-        if case.pk in self._components:
-            self._components[case.pk].discard(component_obj.pk)
-
+        self._remove_relation(
+            "testcase_component",
+            {"testcase_id": case.pk, "component_id": component_obj.pk},
+        )
         print(f"[TestCaseDAO] remove_component: removed component id={component_obj.pk} from case id={case.pk}")
 
     def add_notification_cc(self, case, cc_list):
@@ -243,16 +230,12 @@ class TestCaseDAO:
         Add emails to notification CC list for the given test case.
         Used by the TestCase.add_notification_cc RPC endpoint.
         """
-        # OLD storage
         case.emailing.add_cc(cc_list)
-
-        # NEW storage
-        if case.pk not in self._notification_cc:
-            self._notification_cc[case.pk] = []
         for email in cc_list:
-            if email not in self._notification_cc[case.pk]:
-                self._notification_cc[case.pk].append(email)
-
+            self._add_relation(
+                "testcase_notification_cc",
+                {"testcase_id": case.pk, "email": email},
+            )
         print(f"[TestCaseDAO] add_notification_cc: added {cc_list} to case id={case.pk}")
 
     def remove_notification_cc(self, case, cc_list):
@@ -260,15 +243,12 @@ class TestCaseDAO:
         Remove emails from notification CC list for the given test case.
         Used by the TestCase.remove_notification_cc RPC endpoint.
         """
-        # OLD storage
         case.emailing.remove_cc(cc_list)
-
-        # NEW storage
-        if case.pk in self._notification_cc:
-            for email in cc_list:
-                if email in self._notification_cc[case.pk]:
-                    self._notification_cc[case.pk].remove(email)
-
+        for email in cc_list:
+            self._remove_relation(
+                "testcase_notification_cc",
+                {"testcase_id": case.pk, "email": email},
+            )
         print(f"[TestCaseDAO] remove_notification_cc: removed {cc_list} from case id={case.pk}")
 
 

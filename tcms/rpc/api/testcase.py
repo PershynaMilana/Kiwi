@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from django.contrib.auth import get_user_model
 from django.forms import EmailField, ValidationError
 from django.forms.models import model_to_dict
 from modernrpc.core import REQUEST_KEY, rpc_method
@@ -11,6 +10,7 @@ from tcms.dao.shared.comment_dao import comment_dao
 from tcms.dao.shared.property_dao import testcase_property_dao
 from tcms.dao.shared.tag_dao import tag_dao
 from tcms.dao.testcases.test_case_dao import test_case_dao
+from tcms.dao.user_dao import user_dao
 from tcms.rpc.api.forms.testcase import NewForm, UpdateForm
 from tcms.rpc.decorators import permissions_required
 
@@ -470,7 +470,7 @@ def add_comment(case_id, comment, user_id=None, submit_date=None, **kwargs):
 
     comment_author = request_user
     if user_id and request_user.is_superuser:
-        comment_author = get_user_model().objects.get(pk=user_id)
+        comment_author = user_dao.get_by_id(user_id)
 
     # only super-user can override this
     if not request_user.is_superuser:

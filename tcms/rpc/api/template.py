@@ -5,9 +5,9 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.testcases.template_dao import template_dao
 from tcms.rpc.api.forms.testcase import TemplateForm
 from tcms.rpc.decorators import permissions_required
-from tcms.testcases.models import Template
 
 
 @permissions_required("testcases.view_template")
@@ -24,12 +24,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :rtype: dict
         :raises PermissionDenied: if missing *testcases.view_template* permission
     """
-    return list(
-        Template.objects.filter(**query)
-        .values("id", "name", "text")
-        .order_by("id")
-        .distinct()
-    )
+    return template_dao.filter(query)
 
 
 @permissions_required("testcases.add_template")
@@ -51,6 +46,7 @@ def create(values):
 
     if form.is_valid():
         template = form.save()
+        template_dao.save(template)
         return model_to_dict(template)
 
     raise ValueError(list(form.errors.items()))

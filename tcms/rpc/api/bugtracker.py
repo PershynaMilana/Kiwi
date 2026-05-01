@@ -5,9 +5,9 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.testcases.bug_system_dao import bug_system_dao
 from tcms.rpc.api.forms.testcase import BugSystemForm
 from tcms.rpc.decorators import permissions_required
-from tcms.testcases.models import BugSystem
 
 
 @permissions_required("testcases.view_bugsystem")
@@ -24,21 +24,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :rtype: dict
         :raises PermissionDenied: if missing *testcases.view_bugsystem* permission
     """
-    return list(
-        BugSystem.objects.filter(**query)
-        .values(
-            "id",
-            "name",
-            "tracker_type",
-            "base_url",
-            "api_url",
-            "api_username",
-            # not exposing this field via RPC b/c it will leak
-            # "api_password",
-        )
-        .order_by("id")
-        .distinct()
-    )
+    return bug_system_dao.filter(query)
 
 
 @permissions_required("testcases.add_bugsystem")
@@ -60,6 +46,7 @@ def create(values):
 
     if form.is_valid():
         bug_system = form.save()
+        bug_system_dao.save(bug_system)
         result = model_to_dict(bug_system)
         # not exposing this field via RPC b/c it will leak
         del result["api_password"]

@@ -35,6 +35,9 @@ class PriorityDAO:
 
         return old_result
 
+    def filter_objects(self, query):
+        return Priority.objects.filter(**query).order_by("id")
+
     def get_by_id(self, priority_id):
         old_result = Priority.objects.get(pk=priority_id)
 

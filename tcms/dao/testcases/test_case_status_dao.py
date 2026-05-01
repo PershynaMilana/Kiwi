@@ -18,6 +18,9 @@ class TestCaseStatusDAO:
         else:
             print(f"[TestCaseStatusDAO] OK '{operation}': results match")
 
+    def filter_objects(self, query):
+        return TestCaseStatus.objects.filter(**query)
+
     def filter(self, query):
         old_result = list(
             TestCaseStatus.objects.filter(**query)
