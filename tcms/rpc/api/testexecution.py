@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.forms.models import model_to_dict
 from modernrpc.core import REQUEST_KEY, rpc_method
 
@@ -10,6 +9,7 @@ from tcms.dao.shared.comment_dao import comment_dao
 from tcms.dao.shared.property_dao import testexecution_property_dao
 from tcms.dao.testruns.link_reference_dao import link_reference_dao
 from tcms.dao.testruns.test_execution_dao import test_execution_dao
+from tcms.dao.user_dao import user_dao
 from tcms.rpc.api.forms.testexecution import LinkReferenceForm
 from tcms.rpc.api.forms.testrun import NewExecutionForm, UpdateExecutionForm
 from tcms.rpc.api.utils import tracker_from_url
@@ -53,7 +53,7 @@ def add_comment(execution_id, comment, user_id=None, submit_date=None, **kwargs)
 
     comment_author = request_user
     if user_id and request_user.is_superuser:
-        comment_author = get_user_model().objects.get(pk=user_id)
+        comment_author = user_dao.get_by_id(user_id)
 
     # only super-user can override this
     if not request_user.is_superuser:

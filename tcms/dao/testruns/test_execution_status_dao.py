@@ -18,6 +18,9 @@ class TestExecutionStatusDAO:
         else:
             print(f"[TestExecutionStatusDAO] OK '{operation}': results match")
 
+    def filter_objects(self, query):
+        return TestExecutionStatus.objects.filter(**query).order_by("-weight", "name")
+
     def filter(self, query):
         old_result = list(
             TestExecutionStatus.objects.filter(**query)

@@ -5,9 +5,9 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.testruns.test_execution_status_dao import test_execution_status_dao
 from tcms.rpc.api.forms.testrun import TestExecutionStatusForm
 from tcms.rpc.decorators import permissions_required
-from tcms.testruns.models import TestExecutionStatus
 
 
 @permissions_required("testruns.view_testexecutionstatus")
@@ -23,12 +23,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: Serialized list of :class:`tcms.testruns.models.TestExecutionStatus` objects
         :rtype: list(dict)
     """
-    return list(
-        TestExecutionStatus.objects.filter(**query)
-        .values("id", "name", "weight", "icon", "color")
-        .order_by("id")
-        .distinct()
-    )
+    return test_execution_status_dao.filter(query)
 
 
 @permissions_required("testruns.add_testexecutionstatus")
@@ -52,6 +47,7 @@ def create(values):
 
     if form.is_valid():
         status = form.save()
+        test_execution_status_dao.save(status)
         return model_to_dict(status)
 
     raise ValueError(list(form.errors.items()))

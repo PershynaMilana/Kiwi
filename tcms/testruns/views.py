@@ -15,16 +15,18 @@ from guardian.decorators import permission_required as object_permission_require
 
 from tcms.core.contrib.linkreference.forms import LinkReferenceForm
 from tcms.core.forms import SimpleCommentForm
+from tcms.dao.testcases.bug_system_dao import bug_system_dao
 from tcms.dao.testcases.test_case_dao import test_case_dao
+from tcms.dao.testcases.test_case_status_dao import test_case_status_dao
 from tcms.dao.testplans.test_plan_dao import test_plan_dao
+from tcms.dao.testruns.environment_dao import environment_property_dao
+from tcms.dao.testruns.test_execution_status_dao import test_execution_status_dao
 from tcms.dao.testruns.test_run_dao import test_run_dao
-from tcms.testcases.models import BugSystem, TestCase, TestCasePlan, TestCaseStatus
+from tcms.testcases.models import TestCase, TestCasePlan
 from tcms.testplans.models import TestPlan
 from tcms.testruns.forms import NewRunForm, SearchRunForm
 from tcms.testruns.models import (
     Environment,
-    EnvironmentProperty,
-    TestExecutionStatus,
     TestRun,
 )
 
@@ -79,8 +81,8 @@ class NewTestRunView(View):
             test_run_dao.save(test_run)
 
             # copy all of the selected properties into the test run
-            for prop in EnvironmentProperty.objects.filter(
-                environment__in=form.cleaned_data["environment"]
+            for prop in environment_property_dao.filter_objects(
+                {"environment__in": form.cleaned_data["environment"]}
             ):
                 test_run.property_set.create(name=prop.name, value=prop.value)
 
@@ -183,12 +185,10 @@ class GetTestRunView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["execution_statuses"] = TestExecutionStatus.objects.order_by(
-            "-weight", "name"
-        )
-        context["confirmed_statuses"] = TestCaseStatus.objects.filter(is_confirmed=True)
+        context["execution_statuses"] = test_execution_status_dao.filter_objects({})
+        context["confirmed_statuses"] = test_case_status_dao.filter_objects({"is_confirmed": True})
         context["link_form"] = LinkReferenceForm()
-        context["bug_trackers"] = BugSystem.objects.all()
+        context["bug_trackers"] = bug_system_dao.filter_objects({})
         context["comment_form"] = SimpleCommentForm()
         context["OBJECT_MENU_ITEMS"] = [
             (

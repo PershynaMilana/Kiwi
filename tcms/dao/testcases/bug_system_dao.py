@@ -19,6 +19,9 @@ class BugSystemDAO:
         else:
             print(f"[BugSystemDAO] OK '{operation}': results match")
 
+    def filter_objects(self, query):
+        return BugSystem.objects.filter(**query)
+
     def filter(self, query):
         old_result = list(
             BugSystem.objects.filter(**query)

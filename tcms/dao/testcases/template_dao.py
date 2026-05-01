@@ -35,6 +35,9 @@ class TemplateDAO:
 
         return old_result
 
+    def filter_objects(self, query):
+        return Template.objects.filter(**query).order_by("id")
+
     def get_by_id(self, template_id):
         old_result = Template.objects.get(pk=template_id)
 

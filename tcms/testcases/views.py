@@ -12,6 +12,7 @@ from django.views.generic.base import TemplateView, View
 from django.views.generic.edit import CreateView, UpdateView
 from guardian.decorators import permission_required as object_permission_required
 
+from tcms.dao.testcases.template_dao import template_dao
 from tcms.dao.testcases.test_case_dao import test_case_dao
 from tcms.signals import NEW_TEST_CASE_SIGNAL
 from tcms.testcases.forms import (
@@ -20,7 +21,7 @@ from tcms.testcases.forms import (
     SearchCaseForm,
     TestCaseForm,
 )
-from tcms.testcases.models import Template, TestCase
+from tcms.testcases.models import TestCase
 from tcms.testplans.models import TestPlan
 
 
@@ -65,7 +66,7 @@ class NewCaseView(CreateView):
         context = super().get_context_data(**kwargs)
         context["test_plan"] = plan_from_request_or_none(self.request)
         context["notify_formset"] = kwargs.get("notify_formset") or CaseNotifyFormSet()
-        context["templates"] = Template.objects.all()
+        context["templates"] = template_dao.filter_objects({})
         return context
 
     def form_valid(self, form):

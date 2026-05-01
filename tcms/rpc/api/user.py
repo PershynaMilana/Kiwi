@@ -3,11 +3,11 @@
 from attachments.models import Attachment
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
 from django.forms.models import model_to_dict
 from modernrpc.core import REQUEST_KEY, rpc_method
 
+from tcms.dao.kiwi_auth.group_dao import group_dao
 from tcms.dao.user_dao import user_dao
 from tcms.rpc import utils
 from tcms.rpc.decorators import permissions_required
@@ -184,7 +184,7 @@ def join_group(username, groupname):
         :raises PermissionDenied: if missing *auth.change_user* permission
     """
     user = user_dao.get_by_username(username)
-    group = Group.objects.get(name=groupname)
+    group = group_dao.get_by_name(groupname)
     user_dao.add_to_group(user, group)
 
 

@@ -5,10 +5,10 @@ from django.utils.translation import gettext_lazy as _
 from modernrpc.auth.basic import http_basic_auth_login_required
 from modernrpc.core import REQUEST_KEY, rpc_method
 
+from tcms.dao.testcases.bug_system_dao import bug_system_dao
+from tcms.dao.testruns.test_execution_dao import test_execution_dao
 from tcms.rpc.api.utils import tracker_from_url
 from tcms.rpc.decorators import permissions_required
-from tcms.testcases.models import BugSystem
-from tcms.testruns.models import TestExecution
 
 
 @http_basic_auth_login_required
@@ -70,8 +70,8 @@ def report(execution_id, tracker_id, **kwargs):
         ),
     }
 
-    execution = TestExecution.objects.get(pk=execution_id)
-    bug_system = BugSystem.objects.get(pk=tracker_id)
+    execution = test_execution_dao.get_by_id(execution_id)
+    bug_system = bug_system_dao.get_by_id(tracker_id)
     tracker = import_string(bug_system.tracker_type)(bug_system, request)
     if not tracker.is_adding_testcase_to_issue_disabled():
         url = tracker.report_issue_from_testexecution(execution, request.user)

@@ -3,7 +3,9 @@ from django.conf import settings
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
-from tcms.management.models import Tag
+from django.conf import settings
+
+from tcms.dao.shared.tag_dao import tag_dao
 from tcms.rpc.api.forms.management import TagForm
 from tcms.rpc.decorators import permissions_required
 
@@ -21,13 +23,11 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: Serialized list of :class:`tcms.management.models.Tag` objects
         :rtype: list(dict)
     """
-    fields_list = ["id", "name", "case", "plan", "run"]
+    extra_fields = ["case", "plan", "run"]
     if "tcms.bugs.apps.AppConfig" in settings.INSTALLED_APPS:
-        fields_list.append("bugs")
+        extra_fields.append("bugs")
 
-    return list(
-        Tag.objects.filter(**query).values(*fields_list).order_by("id").distinct()
-    )
+    return tag_dao.filter(query, extra_fields=extra_fields)
 
 
 @permissions_required("management.add_tag")

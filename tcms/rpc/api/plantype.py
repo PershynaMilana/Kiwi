@@ -3,9 +3,9 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.testplans.plan_type_dao import plan_type_dao
 from tcms.rpc.api.forms.testplan import PlanTypeForm
 from tcms.rpc.decorators import permissions_required
-from tcms.testplans.models import PlanType
 
 
 @rpc_method(name="PlanType.create")
@@ -26,6 +26,7 @@ def create(values):
     form = PlanTypeForm(values)
     if form.is_valid():
         plan_type = form.save()
+        plan_type_dao.save(plan_type)
         return model_to_dict(plan_type)
 
     raise ValueError(list(form.errors.items()))
@@ -44,13 +45,4 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: Serialized list of :class:`tcms.testplans.models.PlanType` objects
         :rtype: dict
     """
-    return list(
-        PlanType.objects.filter(**query)
-        .values(
-            "id",
-            "name",
-            "description",
-        )
-        .order_by("id")
-        .distinct()
-    )
+    return plan_type_dao.filter(query)
