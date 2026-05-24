@@ -8,6 +8,7 @@ from tcms.dao.shared.attachment_dao import attachment_dao
 from tcms.dao.shared.comment_dao import comment_dao
 from tcms.dao.shared.property_dao import testexecution_property_dao
 from tcms.dao.testruns.link_reference_dao import link_reference_dao
+from tcms.dao.firestore.firestore_test_execution_dao import firestore_test_execution_dao
 from tcms.dao.testruns.test_execution_dao import test_execution_dao
 from tcms.dao.user_dao import user_dao
 from tcms.rpc.api.forms.testexecution import LinkReferenceForm
@@ -111,7 +112,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: List of serialized :class:`tcms.testruns.models.TestExecution` objects
         :rtype: list(dict)
     """
-    return test_execution_dao.filter(query)
+    return firestore_test_execution_dao.filter(query)
 
 
 @permissions_required("testruns.view_historicaltestexecution")
@@ -176,6 +177,7 @@ def update(execution_id, values, **kwargs):
     if form.is_valid():
         test_execution = form.save()
         test_execution_dao.save(test_execution)
+        firestore_test_execution_dao.save(test_execution)
     else:
         raise ValueError(list(form.errors.items()))
 
@@ -415,6 +417,7 @@ def create(values, **kwargs):
     if form.is_valid():
         test_execution = form.save()
         test_execution_dao.save(test_execution)
+        firestore_test_execution_dao.save(test_execution)
         return model_to_dict(test_execution)
 
     raise ValueError(list(form.errors.items()))

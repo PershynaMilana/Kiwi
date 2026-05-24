@@ -21,6 +21,8 @@ from tcms.dao.testcases.test_case_status_dao import test_case_status_dao
 from tcms.dao.testplans.test_plan_dao import test_plan_dao
 from tcms.dao.testruns.environment_dao import environment_property_dao
 from tcms.dao.testruns.test_execution_status_dao import test_execution_status_dao
+from tcms.dao.firestore.firestore_test_execution_dao import firestore_test_execution_dao
+from tcms.dao.firestore.firestore_test_run_dao import firestore_test_run_dao
 from tcms.dao.testruns.test_run_dao import test_run_dao
 from tcms.testcases.models import TestCase, TestCasePlan
 from tcms.testplans.models import TestPlan
@@ -79,6 +81,7 @@ class NewTestRunView(View):
         if form.is_valid():
             test_run = form.save()
             test_run_dao.save(test_run)
+            firestore_test_run_dao.save(test_run)
 
             # copy all of the selected properties into the test run
             for prop in environment_property_dao.filter_objects(
@@ -97,12 +100,13 @@ class NewTestRunView(View):
                 except ObjectDoesNotExist:
                     sortkey = loop * 10
 
-                test_run.create_execution(
+                for execution in test_run.create_execution(
                     case=case,
                     assignee=form.cleaned_data["default_tester"],
                     sortkey=sortkey,
                     matrix_type=form.cleaned_data["matrix_type"],
-                )
+                ):
+                    firestore_test_execution_dao.save(execution)
                 loop += 1
 
             return HttpResponseRedirect(

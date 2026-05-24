@@ -8,6 +8,7 @@ from django.forms.models import model_to_dict
 from modernrpc.core import REQUEST_KEY, rpc_method
 
 from tcms.dao.kiwi_auth.group_dao import group_dao
+from tcms.dao.firestore.firestore_user_dao import firestore_user_dao
 from tcms.dao.user_dao import user_dao
 from tcms.rpc import utils
 from tcms.rpc.decorators import permissions_required
@@ -55,7 +56,7 @@ def filter(query=None, **kwargs):  # pylint: disable=redefined-builtin
     if not query:
         query = {"pk": kwargs.get(REQUEST_KEY).user.pk}
 
-    return user_dao.filter(query)
+    return firestore_user_dao.filter(query)
 
 
 @rpc_method(name="User.update")
@@ -125,6 +126,7 @@ def update(
             setattr(user_being_updated, field, values[field])
 
     user_dao.save(user_being_updated, update_fields=update_fields)
+    firestore_user_dao.save(user_being_updated, update_fields=update_fields)
     return _get_user_dict(user_being_updated)
 
 
@@ -163,6 +165,7 @@ def deactivate(query):
     result = []
     for user in user_dao.filter_objects(query):
         user_dao.deactivate(user)
+        firestore_user_dao.deactivate(user)
 
         result.append(_get_user_dict(user))
 

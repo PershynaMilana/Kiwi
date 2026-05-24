@@ -3,6 +3,10 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.firestore.firestore_environment_dao import (
+    firestore_environment_dao,
+    firestore_environment_property_dao,
+)
 from tcms.dao.testruns.environment_dao import environment_dao, environment_property_dao
 from tcms.rpc.api.forms.testrun import EnvironmentForm
 from tcms.rpc.decorators import permissions_required
@@ -25,7 +29,7 @@ def properties(query=None):
     if query is None:
         query = {}
 
-    return environment_property_dao.filter(query)
+    return firestore_environment_property_dao.filter(query)
 
 
 @permissions_required("testruns.delete_environmentproperty")
@@ -40,7 +44,7 @@ def remove_property(query):
         :type query: dict
         :raises PermissionDenied: if missing *testruns.delete_environmentproperty* permission
     """
-    environment_property_dao.remove(query)
+    firestore_environment_property_dao.remove(query)
 
 
 @permissions_required("testruns.add_environmentproperty")
@@ -61,7 +65,7 @@ def add_property(environment_id, name, value):
         :rtype: dict
         :raises PermissionDenied: if missing *testruns.add_environmentproperty* permission
     """
-    prop, _ = environment_property_dao.get_or_create(environment_id, name, value)
+    prop, _ = firestore_environment_property_dao.get_or_create(environment_id, name, value)
     return model_to_dict(prop)
 
 
@@ -82,7 +86,7 @@ def filter(query=None):  # pylint: disable=redefined-builtin
     if query is None:
         query = {}
 
-    return environment_dao.filter(query)
+    return firestore_environment_dao.filter(query)
 
 
 @permissions_required("testruns.add_environment")
@@ -104,6 +108,7 @@ def create(values):
     if form.is_valid():
         environment = form.save()
         environment_dao.save(environment)
+        firestore_environment_dao.save(environment)
         return model_to_dict(environment)
 
     raise ValueError(list(form.errors.items()))

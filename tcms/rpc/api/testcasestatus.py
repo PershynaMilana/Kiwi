@@ -3,6 +3,7 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.firestore.firestore_test_case_status_dao import firestore_test_case_status_dao
 from tcms.dao.testcases.test_case_status_dao import test_case_status_dao
 from tcms.rpc.api.forms.testcase import TestCaseStatusForm
 from tcms.rpc.decorators import permissions_required
@@ -21,7 +22,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: Serialized list of :class:`tcms.testcases.models.TestCaseStatus` objects
         :rtype: list(dict)
     """
-    return test_case_status_dao.filter(query)
+    return firestore_test_case_status_dao.filter(query)
 
 
 @permissions_required("testcases.add_testcasestatus")
@@ -46,6 +47,7 @@ def create(values):
     if form.is_valid():
         status = form.save()
         test_case_status_dao.save(status)
+        firestore_test_case_status_dao.save(status)
         return model_to_dict(status)
 
     raise ValueError(list(form.errors.items()))

@@ -17,6 +17,7 @@ from tcms.bugs.forms import BugCommentForm, NewBugForm
 from tcms.bugs.models import Bug
 from tcms.core.helpers.comments import add_comment
 from tcms.dao.bugs.bug_dao import bug_dao
+from tcms.dao.firestore.firestore_bug_dao import firestore_bug_dao
 from tcms.dao.management.component_dao import component_dao
 
 
@@ -93,6 +94,7 @@ class New(CreateView):
             self.object.save()
         add_comment([self.object], form.cleaned_data["text"], self.request.user)
         bug_dao.save(self.object)
+        firestore_bug_dao.save(self.object)
 
         return response
 
@@ -150,6 +152,7 @@ class New(CreateView):
 
         bug = Bug(**data)
         bug_dao.save(bug)
+        firestore_bug_dao.save(bug)
         add_comment([bug], text, bug.reporter)
 
         return bug
@@ -237,6 +240,7 @@ class AddComment(View):
                 bug.status = True
                 add_comment([bug], _("*bug reopened*"), request.user)
             bug_dao.save(bug)
+            firestore_bug_dao.save(bug)
 
             return HttpResponseRedirect(reverse("bugs-get", args=[bug.pk]))
 
