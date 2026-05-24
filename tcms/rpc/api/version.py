@@ -3,6 +3,7 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.firestore.firestore_version_dao import firestore_version_dao
 from tcms.dao.management.version_dao import version_dao
 from tcms.management.forms import VersionForm
 from tcms.management.models import Version
@@ -22,7 +23,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: List of serialized :class:`tcms.management.models.Version` objects
         :rtype: list(dict)
     """
-    return version_dao.filter(query)
+    return firestore_version_dao.filter(query)
 
 
 @permissions_required("management.add_version")
@@ -50,6 +51,7 @@ def create(values):
     if form.is_valid():
         version = form.save()
         version_dao.save(version)
+        firestore_version_dao.save(version)
         return model_to_dict(version)
 
     raise ValueError(list(form.errors.items()))

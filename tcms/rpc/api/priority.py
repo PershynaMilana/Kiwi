@@ -3,6 +3,7 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.firestore.firestore_priority_dao import firestore_priority_dao
 from tcms.dao.management.priority_dao import priority_dao
 from tcms.rpc.api.forms.management import PriorityForm
 from tcms.rpc.decorators import permissions_required
@@ -21,7 +22,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: Serialized list of :class:`tcms.management.models.Priority` objects
         :rtype: dict
     """
-    return priority_dao.filter(query)
+    return firestore_priority_dao.filter(query)
 
 
 @permissions_required("management.add_priority")
@@ -46,6 +47,7 @@ def create(values):
     if form.is_valid():
         priority = form.save()
         priority_dao.save(priority)
+        firestore_priority_dao.save(priority)
         return model_to_dict(priority)
 
     raise ValueError(list(form.errors.items()))

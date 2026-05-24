@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.forms.models import model_to_dict
 from modernrpc.core import REQUEST_KEY, rpc_method
 
+from tcms.dao.firestore.firestore_component_dao import firestore_component_dao
 from tcms.dao.management.component_dao import component_dao
 from tcms.rpc.api.forms.management import ComponentForm, ComponentUpdateForm
 from tcms.rpc.decorators import permissions_required
@@ -24,7 +25,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: List of serialized :class:`tcms.management.models.Component` objects
         :rtype: list(dict)
     """
-    return component_dao.filter(query)
+    return firestore_component_dao.filter(query)
 
 
 @permissions_required("management.add_component")
@@ -65,6 +66,7 @@ def create(values, **kwargs):
     if form.is_valid():
         component = form.save()
         component_dao.save(component)
+        firestore_component_dao.save(component)
         return model_to_dict(component)
 
     raise ValueError(list(form.errors.items()))
@@ -93,6 +95,7 @@ def update(component_id, values):
     if form.is_valid():
         component = form.save()
         component_dao.save(component)
+        firestore_component_dao.save(component)
         return model_to_dict(component)
 
     raise ValueError(list(form.errors.items()))

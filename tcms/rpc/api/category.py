@@ -3,6 +3,7 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
+from tcms.dao.firestore.firestore_category_dao import firestore_category_dao
 from tcms.dao.testcases.category_dao import category_dao
 from tcms.rpc.api.forms.testcase import CategoryForm
 from tcms.rpc.decorators import permissions_required
@@ -21,7 +22,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: List of serialized :class:`tcms.testcases.models.Category` objects
         :rtype: list(dict)
     """
-    return category_dao.filter(query)
+    return firestore_category_dao.filter(query)
 
 
 @permissions_required("testcases.add_category")
@@ -44,6 +45,7 @@ def create(values):
     if form.is_valid():
         category = form.save()
         category_dao.save(category)
+        firestore_category_dao.save(category)
         return model_to_dict(category)
 
     raise ValueError(list(form.errors.items()))

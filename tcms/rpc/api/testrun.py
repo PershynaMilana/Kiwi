@@ -6,6 +6,8 @@ from tcms.dao.shared.attachment_dao import attachment_dao
 from tcms.dao.shared.property_dao import testrun_property_dao
 from tcms.dao.shared.tag_dao import tag_dao
 from tcms.dao.testcases.test_case_dao import test_case_dao
+from tcms.dao.firestore.firestore_tag_dao import firestore_tag_dao
+from tcms.dao.firestore.firestore_test_run_dao import firestore_test_run_dao
 from tcms.dao.testruns.test_run_dao import test_run_dao
 from tcms.rpc.api.forms.testrun import UpdateForm, UserForm
 from tcms.rpc.decorators import permissions_required
@@ -90,6 +92,7 @@ def add_tag(run_id, tag_name, **kwargs):
     tag_obj, _ = tag_dao.get_or_create(request.user, tag_name)
     test_run = test_run_dao.get_by_id(run_id)
     tag_dao.add_tag(test_run, tag_obj)
+    firestore_tag_dao.add_tag(test_run, tag_obj)
     return list(test_run.tag.values("id", "name"))
 
 
@@ -113,6 +116,7 @@ def remove_tag(run_id, tag_name):
     tag_obj = tag_dao.get_by_name(tag_name)
     test_run = test_run_dao.get_by_id(run_id)
     tag_dao.remove_tag(test_run, tag_obj)
+    firestore_tag_dao.remove_tag(test_run, tag_obj)
     return list(test_run.tag.values("id", "name"))
 
 
@@ -151,6 +155,7 @@ def create(values, **kwargs):
     if form.is_valid():
         test_run = form.save()
         test_run_dao.save(test_run)
+        firestore_test_run_dao.save(test_run)
         return model_to_dict(test_run, exclude=["cc", "tag"])
 
     raise ValueError(list(form.errors.items()))
@@ -173,7 +178,7 @@ def filter(query=None):  # pylint: disable=redefined-builtin
     if query is None:
         query = {}
 
-    return test_run_dao.filter(query)
+    return firestore_test_run_dao.filter(query)
 
 
 @permissions_required("testruns.change_testrun")
@@ -205,6 +210,7 @@ def update(run_id, values):
     if form.is_valid():
         test_run = form.save()
         test_run_dao.save(test_run)
+        firestore_test_run_dao.save(test_run)
         result = model_to_dict(test_run, exclude=["cc", "tag"])
         # b/c value is set in the DB directly and if None
         # model_to_dict() will not return it

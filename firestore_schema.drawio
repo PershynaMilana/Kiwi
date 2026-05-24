@@ -1,0 +1,324 @@
+<mxfile host="app.diagrams.net" modified="2026-05-02T00:00:00.000Z" agent="Claude" version="21.0.0">
+  <diagram name="Firestore Schema" id="firestore-schema">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ============================================================ -->
+        <!-- LEGEND -->
+        <!-- ============================================================ -->
+        <mxCell id="legend_title" value="Legend" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_main" value="Main Collection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="20" y="55" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_junction" value="Junction Collection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="20" y="95" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- PRODUCT  -->
+        <!-- ============================================================ -->
+        <mxCell id="products" value="products" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="160" width="200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="products_f" value="id: int&#xa;name: str&#xa;description: str&#xa;classification_id: int" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="products">
+          <mxGeometry x="0" y="30" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- VERSION  -->
+        <!-- ============================================================ -->
+        <mxCell id="versions" value="versions" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="260" y="160" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="versions_f" value="id: int&#xa;value: str&#xa;product_id: int" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="versions">
+          <mxGeometry x="0" y="30" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- BUILD  -->
+        <!-- ============================================================ -->
+        <mxCell id="builds" value="builds" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="500" y="160" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="builds_f" value="id: int&#xa;name: str&#xa;version_id: int&#xa;is_active: bool" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="builds">
+          <mxGeometry x="0" y="30" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- COMPONENT  -->
+        <!-- ============================================================ -->
+        <mxCell id="components" value="components" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="740" y="160" width="220" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="components_f" value="id: int&#xa;name: str&#xa;product_id: int&#xa;initial_owner_id: int&#xa;initial_qa_contact_id: int&#xa;description: str" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="components">
+          <mxGeometry x="0" y="30" width="220" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- PRIORITY  -->
+        <!-- ============================================================ -->
+        <mxCell id="priorities" value="priorities" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="160" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="priorities_f" value="id: int&#xa;value: str&#xa;is_active: bool" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="priorities">
+          <mxGeometry x="0" y="30" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- TEST PLAN  -->
+        <!-- ============================================================ -->
+        <mxCell id="test_plans" value="test_plans" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="380" width="220" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="test_plans_f" value="id: int&#xa;name: str&#xa;text: str&#xa;create_date: datetime&#xa;is_active: bool&#xa;extra_link: str&#xa;product_version_id: int&#xa;product_id: int&#xa;author_id: int&#xa;type_id: int&#xa;parent_id: int" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="test_plans">
+          <mxGeometry x="0" y="30" width="220" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- TEST CASE  -->
+        <!-- ============================================================ -->
+        <mxCell id="test_cases" value="test_cases" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="280" y="380" width="240" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="test_cases_f" value="id: int&#xa;summary: str&#xa;create_date: datetime&#xa;is_automated: bool&#xa;script: str&#xa;arguments: str&#xa;extra_link: str&#xa;requirement: str&#xa;notes: str&#xa;text: str&#xa;case_status_id: int&#xa;category_id: int&#xa;priority_id: int&#xa;author_id: int&#xa;default_tester_id: int&#xa;reviewer_id: int&#xa;setup_duration: duration&#xa;testing_duration: duration" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="test_cases">
+          <mxGeometry x="0" y="30" width="240" height="280" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- TEST RUN  -->
+        <!-- ============================================================ -->
+        <mxCell id="test_runs" value="test_runs" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="560" y="380" width="230" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="test_runs_f" value="id: int&#xa;summary: str&#xa;start_date: datetime&#xa;stop_date: datetime&#xa;planned_start: datetime&#xa;planned_stop: datetime&#xa;notes: str&#xa;plan_id: int&#xa;build_id: int&#xa;manager_id: int&#xa;default_tester_id: int" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="test_runs">
+          <mxGeometry x="0" y="30" width="230" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- TEST EXECUTION  -->
+        <!-- ============================================================ -->
+        <mxCell id="test_executions" value="test_executions" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="830" y="380" width="230" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="test_executions_f" value="id: int&#xa;assignee_id: int&#xa;tested_by_id: int&#xa;case_text_version: int&#xa;start_date: datetime&#xa;stop_date: datetime&#xa;sortkey: int&#xa;run_id: int&#xa;case_id: int&#xa;status_id: int&#xa;build_id: int" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="test_executions">
+          <mxGeometry x="0" y="30" width="230" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- USERS (reference)  -->
+        <!-- ============================================================ -->
+        <mxCell id="users" value="users" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="380" width="200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="users_f" value="id: int&#xa;username: str&#xa;first_name: str&#xa;last_name: str&#xa;email: str&#xa;is_active: bool" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="users">
+          <mxGeometry x="0" y="30" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- JUNCTION COLLECTIONS  -->
+        <!-- ============================================================ -->
+
+        <!-- testcase_component -->
+        <mxCell id="junc_tc_comp" value="testcase_component" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="680" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="junc_tc_comp_f" value="testcase_id: int&#xa;component_id: int" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="junc_tc_comp">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- testcase_notification_cc -->
+        <mxCell id="junc_tc_cc" value="testcase_notification_cc" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="270" y="680" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="junc_tc_cc_f" value="testcase_id: int&#xa;email: str" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="junc_tc_cc">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- testplan_tag -->
+        <mxCell id="junc_tp_tag" value="testplan_tag" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="520" y="680" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="junc_tp_tag_f" value="testplan_id: int&#xa;tag_id: int&#xa;tag_name: str" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="junc_tp_tag">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- testcase_tag -->
+        <mxCell id="junc_tc_tag" value="testcase_tag" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="770" y="680" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="junc_tc_tag_f" value="testcase_id: int&#xa;tag_id: int&#xa;tag_name: str" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="junc_tc_tag">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- testrun_tag -->
+        <mxCell id="junc_tr_tag" value="testrun_tag" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="680" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="junc_tr_tag_f" value="testrun_id: int&#xa;tag_id: int&#xa;tag_name: str" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="junc_tr_tag">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- testrun_testcase -->
+        <mxCell id="junc_tr_tc" value="testrun_testcase" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="830" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="junc_tr_tc_f" value="testrun_id: int&#xa;testcase_id: int" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="junc_tr_tc">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- testrun_cc -->
+        <mxCell id="junc_tr_cc" value="testrun_cc" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="270" y="830" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="junc_tr_cc_f" value="testrun_id: int&#xa;email: str" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="junc_tr_cc">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- testplan_testcase (plan_cases) -->
+        <mxCell id="junc_tp_tc" value="testplan_testcase" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="520" y="830" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="junc_tp_tc_f" value="testplan_id: int&#xa;testcase_id: int&#xa;sortkey: int" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;" vertex="1" parent="junc_tp_tc">
+          <mxGeometry x="0" y="30" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- RELATIONSHIP ARROWS (main collections) -->
+        <!-- ============================================================ -->
+
+        <!-- version -> product -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="versions" target="products" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e1_lbl" value="product_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e1">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- build -> version -->
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="builds" target="versions" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2_lbl" value="version_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e2">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- component -> product -->
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" source="components" target="products" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3_lbl" value="product_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e3">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- test_plan -> product -->
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=0;entryX=0;entryY=1;" edge="1" source="test_plans" target="products" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4_lbl" value="product_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e4">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- test_case -> priority -->
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;entryX=0;entryY=1;" edge="1" source="test_cases" target="priorities" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5_lbl" value="priority_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e5">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- test_run -> test_plan -->
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="test_runs" target="test_plans" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6_lbl" value="plan_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e6">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- test_run -> build -->
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=0;entryX=0;entryY=1;" edge="1" source="test_runs" target="builds" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7_lbl" value="build_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e7">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- test_execution -> test_run -->
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="test_executions" target="test_runs" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8_lbl" value="run_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e8">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- test_execution -> test_case -->
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.3;entryX=1;entryY=0.5;" edge="1" source="test_executions" target="test_cases" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_lbl" value="case_id" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="e9">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- JUNCTION ARROWS -->
+        <!-- ============================================================ -->
+
+        <!-- testcase_component -> test_cases -->
+        <mxCell id="j1" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.3;exitY=0;entryX=0.2;entryY=1;" edge="1" source="junc_tc_comp" target="test_cases" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- testcase_component -> components -->
+        <mxCell id="j2" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.7;exitY=0;entryX=0.1;entryY=1;" edge="1" source="junc_tc_comp" target="components" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- testcase_notification_cc -> test_cases -->
+        <mxCell id="j3" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" source="junc_tc_cc" target="test_cases" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- testcase_tag -> test_cases -->
+        <mxCell id="j4" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.3;exitY=0;entryX=0.8;entryY=1;" edge="1" source="junc_tc_tag" target="test_cases" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- testplan_tag -> test_plans -->
+        <mxCell id="j5" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.3;exitY=0;entryX=0.5;entryY=1;" edge="1" source="junc_tp_tag" target="test_plans" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- testrun_tag -> test_runs -->
+        <mxCell id="j6" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.5;exitY=0;entryX=0.8;entryY=1;" edge="1" source="junc_tr_tag" target="test_runs" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- testrun_testcase -> test_runs -->
+        <mxCell id="j7" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.3;exitY=0;entryX=0.1;entryY=1;" edge="1" source="junc_tr_tc" target="test_runs" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- testrun_testcase -> test_cases -->
+        <mxCell id="j8" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.7;exitY=0;entryX=0.3;entryY=1;" edge="1" source="junc_tr_tc" target="test_cases" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- testrun_cc -> test_runs -->
+        <mxCell id="j9" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.5;exitY=0;entryX=0.4;entryY=1;" edge="1" source="junc_tr_cc" target="test_runs" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- testplan_testcase -> test_plans -->
+        <mxCell id="j10" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.3;exitY=0;entryX=0.8;entryY=1;" edge="1" source="junc_tp_tc" target="test_plans" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- testplan_testcase -> test_cases -->
+        <mxCell id="j11" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0.7;exitY=0;entryX=0.2;entryY=1;" edge="1" source="junc_tp_tc" target="test_cases" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

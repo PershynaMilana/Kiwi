@@ -14,6 +14,7 @@ from tcms.core.forms import SimpleCommentForm
 from tcms.dao.management.priority_dao import priority_dao
 from tcms.dao.testcases.test_case_status_dao import test_case_status_dao
 from tcms.dao.testplans.test_plan_dao import test_plan_dao
+from tcms.dao.firestore.firestore_test_plan_dao import firestore_test_plan_dao
 from tcms.dao.testruns.test_run_dao import test_run_dao
 from tcms.testplans.forms import (
     ClonePlanForm,
@@ -51,6 +52,7 @@ class NewTestPlanView(CreateView):
         if notify_formset.is_valid():
             test_plan = form.save()
             test_plan_dao.save(test_plan)
+            firestore_test_plan_dao.save(test_plan)
             notify_formset.instance = test_plan
             notify_formset.save()
 

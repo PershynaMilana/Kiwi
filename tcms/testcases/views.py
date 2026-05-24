@@ -13,6 +13,7 @@ from django.views.generic.edit import CreateView, UpdateView
 from guardian.decorators import permission_required as object_permission_required
 
 from tcms.dao.testcases.template_dao import template_dao
+from tcms.dao.firestore.firestore_test_case_dao import firestore_test_case_dao
 from tcms.dao.testcases.test_case_dao import test_case_dao
 from tcms.signals import NEW_TEST_CASE_SIGNAL
 from tcms.testcases.forms import (
@@ -81,6 +82,7 @@ class NewCaseView(CreateView):
             notify_formset.instance = test_case
             notify_formset.save()
             test_case_dao.save(test_case)
+            firestore_test_case_dao.save(test_case)
 
             NEW_TEST_CASE_SIGNAL.send(sender=test_case.__class__, instance=test_case)
 
@@ -182,7 +184,9 @@ class EditTestCaseView(UpdateView):
         notify_formset = CaseNotifyFormSet(self.request.POST, instance=self.object)
         if notify_formset.is_valid():
             notify_formset.save()
-            return super().form_valid(form)
+            response = super().form_valid(form)
+            firestore_test_case_dao.save(self.object)
+            return response
 
         # taken from FormMixin.form_invalid()
         return self.render_to_response(

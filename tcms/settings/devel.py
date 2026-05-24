@@ -47,6 +47,10 @@ STORAGES["staticfiles"][  # noqa: F405
 
 ANONYMOUS_ANALYTICS = False
 
+# Firestore credentials — point to your Firebase service account JSON key.
+# Download from: Firebase Console → Project Settings → Service Accounts → Generate new private key
+FIRESTORE_CREDENTIALS_PATH = os.path.join(TCMS_ROOT_PATH, "..", "firestore-credentials.json")  # noqa: F405
+
 try:
     from .local_settings import *  # noqa: F401,F403
 except ImportError:

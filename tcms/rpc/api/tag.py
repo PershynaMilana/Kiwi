@@ -5,6 +5,7 @@ from modernrpc.core import rpc_method
 
 from django.conf import settings
 
+from tcms.dao.firestore.firestore_tag_dao import firestore_tag_dao
 from tcms.dao.shared.tag_dao import tag_dao
 from tcms.rpc.api.forms.management import TagForm
 from tcms.rpc.decorators import permissions_required
@@ -51,6 +52,7 @@ def create(values):
 
     if form.is_valid():
         tag = form.save()
+        firestore_tag_dao.save(tag)
         return model_to_dict(tag)
 
     raise ValueError(list(form.errors.items()))

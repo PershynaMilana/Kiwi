@@ -8,6 +8,7 @@ from tcms.bugs.forms import NewBugFromRPCForm, SeverityForm
 from tcms.bugs.models import Bug, Severity
 from tcms.core.helpers import comments
 from tcms.dao.bugs.bug_dao import bug_dao
+from tcms.dao.firestore.firestore_bug_dao import firestore_bug_dao
 from tcms.dao.testruns.test_execution_dao import test_execution_dao
 from tcms.management.models import Tag
 from tcms.rpc import utils
@@ -68,7 +69,7 @@ def remove(query):
         :type query: dict
         :raises PermissionDenied: if missing *bugs.delete_bugtag* permission
     """
-    bug_dao.remove(query)
+    firestore_bug_dao.remove(query)
 
 
 @permissions_required("bugs.view_bug")
@@ -84,7 +85,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: List of serialized :class:`tcms.bugs.models.Bug` objects.
         :rtype: list
     """
-    return bug_dao.filter_with_names(query)
+    return firestore_bug_dao.filter_with_names(query)
 
 
 @permissions_required("bugs.view_bug")
@@ -102,7 +103,7 @@ def filter_canonical(query):  # pylint: disable=redefined-builtin
 
     .. versionadded:: 15.3
     """
-    return bug_dao.filter_canonical(query)
+    return firestore_bug_dao.filter_canonical(query)
 
 
 @permissions_required("bugs.add_bug")
@@ -140,6 +141,7 @@ def create(values, **kwargs):
         if "created_at" in form.cleaned_data:
             bug.created_at = form.cleaned_data["created_at"]
         bug_dao.save(bug)
+        firestore_bug_dao.save(bug)
 
         result = model_to_dict(bug)
         if "created_at" not in result:
