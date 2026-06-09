@@ -48,8 +48,15 @@ class Product(models.Model, UrlMixin):
         )
 
         self.category.get_or_create(name="--default--")
-        version, _ = self.version.get_or_create(value="unspecified")
-        version.build.get_or_create(name="unspecified")
+        version, version_created = self.version.get_or_create(value="unspecified")
+        if not version_created:
+            # Version already existed: Version.save() wasn't called in this
+            # transaction, so the "unspecified" build may not be present yet.
+            # For a freshly created version, Version.save() already ran
+            # version.build.get_or_create() — calling it again in the same
+            # Firestore transaction would raise ProgrammingError (read-after-write
+            # on the same collection within one transaction).
+            version.build.get_or_create(name="unspecified")
 
     class Meta:
         ordering = ["name"]

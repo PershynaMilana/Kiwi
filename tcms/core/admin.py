@@ -8,8 +8,6 @@ from django.contrib.sites.models import Site
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django_comments.models import Comment
-from guardian.admin import GuardedModelAdminMixin
-
 
 class KiwiSiteAdmin(SiteAdmin):
     """
@@ -40,7 +38,23 @@ admin.site.register(Site, KiwiSiteAdmin)
 admin.site.disable_action("delete_selected")
 
 
-class ObjectPermissionsAdminMixin(GuardedModelAdminMixin):
+class SafePkAdminMixin:
+    """
+    Assigns a Firestore-safe PK (< 2^31) when creating new objects via admin.
+    Prevents gcloudc from assigning large auto-IDs that then get filtered out
+    by get_queryset() overrides.
+    """
+
+    def save_model(self, request, obj, form, change):
+        if not change and obj.pk is None:
+            from django.conf import settings as _s
+            if getattr(_s, "USE_FIRESTORE_DAOS", False):
+                from tcms.dao.firestore.utils import generate_safe_pk
+                obj.pk = generate_safe_pk(obj.__class__)
+        super().save_model(request, obj, form, change)
+
+
+class ObjectPermissionsAdminMixin(admin.ModelAdmin):
     """
     This class should be used in conjunction with admin.ModelAdmin or
     its descendants and teaches Django to respect object-level permissions!

@@ -3,17 +3,23 @@ from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
-from tcms.core.admin import ObjectPermissionsAdminMixin
+from tcms.core.admin import ObjectPermissionsAdminMixin, SafePkAdminMixin
 from tcms.core.history import ReadOnlyHistoryAdmin
 from tcms.testplans.models import PlanType, TestPlan
 
 
-class PlanTypeAdmin(admin.ModelAdmin):
+class PlanTypeAdmin(SafePkAdminMixin, admin.ModelAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     search_fields = ("name",)
     list_display = ("id", "name", "description")
 
 
 class TestPlanAdmin(ObjectPermissionsAdminMixin, ReadOnlyHistoryAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     def add_view(self, request, form_url="", extra_context=None):
         return HttpResponseRedirect(reverse("plans-new"))
 

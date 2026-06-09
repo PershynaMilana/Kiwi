@@ -3,7 +3,6 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
-from tcms.dao.firestore.firestore_product_dao import firestore_product_dao
 from tcms.dao.management.product_dao import product_dao
 from tcms.management.models import Product
 from tcms.rpc.api.forms.management import ProductForm
@@ -30,7 +29,6 @@ def create(values):
     if form.is_valid():
         product = form.save()
         product_dao.save(product)
-        firestore_product_dao.save(product)
         return model_to_dict(product)
 
     raise ValueError(list(form.errors.items()))
@@ -57,4 +55,4 @@ def filter(query=None):  # pylint: disable=redefined-builtin
     if query is None:
         query = {}
 
-    return firestore_product_dao.filter(query)
+    return product_dao.filter(query)

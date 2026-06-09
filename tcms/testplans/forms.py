@@ -15,6 +15,14 @@ class NewPlanForm(forms.ModelForm):
 
     text = forms.CharField(widget=SimpleMDE(), required=False)
 
+    # Override parent field to avoid TreeNodeChoiceField which calls
+    # queryset.with_tree_fields() — unsupported by Firestore (no CTE support).
+    parent = forms.ModelChoiceField(
+        queryset=TestPlan.objects.without_tree_fields(),
+        required=False,
+        empty_label="---------",
+    )
+
     def populate(self, product_id):
         if product_id:
             self.fields["product_version"].queryset = Version.objects.filter(
@@ -50,6 +58,13 @@ class SearchPlanForm(forms.ModelForm):
 
     # extra fields
     default_tester = UserField()
+
+    # Avoid TreeNodeChoiceField which calls with_tree_fields() — no CTE in Firestore.
+    parent = forms.ModelChoiceField(
+        queryset=TestPlan.objects.without_tree_fields(),
+        required=False,
+        empty_label="---------",
+    )
 
     def populate(self, product_id=None):
         if product_id:

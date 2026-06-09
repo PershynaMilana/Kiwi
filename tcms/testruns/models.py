@@ -26,6 +26,14 @@ TestExecutionStatusSubtotal = namedtuple(
 )
 
 
+def _latest_history_id(case):
+    """Return the latest history_id for a case, or 0 if no history exists."""
+    try:
+        return case.history.latest().history_id
+    except Exception:
+        return 0
+
+
 class TestRun(models.Model, UrlMixin):
     history = KiwiHistoricalRecords()
 
@@ -78,43 +86,69 @@ class TestRun(models.Model, UrlMixin):
         """
         Get the all related mails from the run
         """
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
         send_to = []
         if self.manager.is_active:
             send_to.append(self.manager.email)
-        send_to.extend(self.cc.filter(is_active=True).values_list("email", flat=True))
+
+        # self.cc is M2M to User via TestRunCC junction table.
+        # Avoid cross-join: query junction directly, then fetch active users.
+        cc_user_ids = list(
+            TestRunCC.objects.filter(run_id=self.pk).values_list("user_id", flat=True)
+        )
+        if cc_user_ids:
+            send_to.extend(
+                User.objects.filter(pk__in=cc_user_ids, is_active=True).values_list("email", flat=True)
+            )
+
         if self.default_tester_id and self.default_tester.is_active:
             send_to.append(self.default_tester.email)
 
-        for execution in self.executions.select_related("assignee").filter(
-            assignee__is_active=True
-        ):
-            if execution.assignee_id:
-                send_to.append(execution.assignee.email)
+        # Avoid cross-join: get assignee IDs from executions, then fetch active users.
+        assignee_ids = list(
+            self.executions.values_list("assignee_id", flat=True)
+        )
+        assignee_ids = [aid for aid in assignee_ids if aid is not None]
+        if assignee_ids:
+            send_to.extend(
+                User.objects.filter(pk__in=assignee_ids, is_active=True).values_list("email", flat=True)
+            )
 
         send_to = set(send_to)
         # don't email author of last change
-        send_to.discard(
-            getattr(
-                self.history.latest().history_user,  # pylint: disable=no-member
-                "email",
-                "",
+        try:
+            send_to.discard(
+                getattr(
+                    self.history.latest().history_user,  # pylint: disable=no-member
+                    "email",
+                    "",
+                )
             )
-        )
+        except Exception:
+            pass
         return list(send_to)
 
     def _create_single_execution(self, case, assignee, build, sortkey):
-        return self.executions.create(
+        from django.conf import settings as _s
+        kwargs = dict(
             case=case,
             assignee=assignee,
             tested_by=None,
             # usually IDLE but users can customize statuses
             status=TestExecutionStatus.objects.filter(weight=0).first(),
-            case_text_version=case.history.latest().history_id,
+            case_text_version=_latest_history_id(case),
             build=build or self.build,
             sortkey=sortkey,
             stop_date=None,
             start_date=None,
         )
+        if getattr(_s, "USE_FIRESTORE_DAOS", False):
+            from tcms.dao.firestore.utils import generate_safe_pk
+            from tcms.testruns.models import TestExecution as _TE
+            kwargs["pk"] = generate_safe_pk(_TE)
+        return self.executions.create(**kwargs)
 
     def create_execution(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
@@ -134,9 +168,12 @@ class TestRun(models.Model, UrlMixin):
         )
 
         executions = []
-        properties = self.property_set.union(TestCaseProperty.objects.filter(case=case))
+        # union() spans two Firestore collections — fetch each separately and combine.
+        properties = list(self.property_set.all()) + list(
+            TestCaseProperty.objects.filter(case=case)
+        )
 
-        if properties.count():
+        if properties:
             for prop_tuple in self.property_matrix(properties, matrix_type):
                 execution = self._create_single_execution(
                     case, assignee, build, sortkey
@@ -160,7 +197,11 @@ class TestRun(models.Model, UrlMixin):
         Return a sequence of tuples representing the property matrix!
         """
         property_groups = OrderedDict()
-        for prop in properties.order_by("name", "value"):
+        if hasattr(properties, "order_by"):
+            props_ordered = properties.order_by("name", "value")
+        else:
+            props_ordered = sorted(properties, key=lambda p: (p.name or "", p.value or ""))
+        for prop in props_ordered:
             if prop.name in property_groups:
                 # do not repeat non-distinct values
                 if prop not in property_groups[prop.name]:
@@ -206,12 +247,18 @@ class TestRun(models.Model, UrlMixin):
                  total number of executions, complete percent, and failure percent.
         :rtype: namedtuple
         """
-        total_count = self.executions.count()
+        # Load into Python to avoid cross-join queries (status__weight traverses collections)
+        all_executions = list(self.executions.all())
+        total_count = len(all_executions)
         if total_count:
-            complete_count = self.executions.exclude(status__weight=0).count()
+            status_weights = {s.pk: s.weight for s in TestExecutionStatus.objects.all()}
+            complete_count = sum(
+                1 for e in all_executions if status_weights.get(e.status_id, 0) != 0
+            )
             complete_percent = complete_count * 100.0 / total_count
-
-            failing_count = self.executions.filter(status__weight__lt=0).count()
+            failing_count = sum(
+                1 for e in all_executions if status_weights.get(e.status_id, 0) < 0
+            )
             failing_percent = failing_count * 100.0 / total_count
         else:
             complete_percent = 0.0

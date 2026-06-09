@@ -6,28 +6,24 @@ from django.db import migrations
 
 def rename_permissions(apps, schema_editor):
     permission_model = apps.get_model("auth", "Permission")
-
-    for permission in permission_model.objects.filter(codename__contains="testcaserun"):
-        new_name = permission.name.replace("test case run", "test execution")
-        new_codename = permission.codename.replace("testcaserun", "testexecution")
-
-        permission.codename = new_codename
-        permission.name = new_name
-        permission.save()
+    for permission in permission_model.objects.all():
+        if "testcaserun" in permission.codename:
+            permission.name = permission.name.replace("test case run", "test execution")
+            permission.codename = permission.codename.replace(
+                "testcaserun", "testexecution"
+            )
+            permission.save()
 
 
 def backward_rename_permissions(apps, schema_editor):
     permission_model = apps.get_model("auth", "Permission")
-
-    for permission in permission_model.objects.filter(
-        codename__contains="testexecution"
-    ):
-        old_name = permission.name.replace("test execution", "test case run")
-        old_codename = permission.codename.replace("testexecution", "testcaserun")
-
-        permission.codename = old_codename
-        permission.name = old_name
-        permission.save()
+    for permission in permission_model.objects.all():
+        if "testexecution" in permission.codename:
+            permission.name = permission.name.replace("test execution", "test case run")
+            permission.codename = permission.codename.replace(
+                "testexecution", "testcaserun"
+            )
+            permission.save()
 
 
 class Migration(migrations.Migration):
@@ -44,14 +40,30 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameModel(old_name="TestCaseRun", new_name="TestExecution"),
-        migrations.RenameModel(
-            old_name="TestCaseRunStatus",
-            new_name="TestExecutionStatus",
+        # Firestore is schemaless — no collection rename needed; apply state only
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.RenameModel(old_name="TestCaseRun", new_name="TestExecution"),
+            ],
+            database_operations=[],
         ),
-        migrations.RenameModel(
-            old_name="HistoricalTestCaseRun",
-            new_name="HistoricalTestExecution",
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.RenameModel(
+                    old_name="TestCaseRunStatus",
+                    new_name="TestExecutionStatus",
+                ),
+            ],
+            database_operations=[],
+        ),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.RenameModel(
+                    old_name="HistoricalTestCaseRun",
+                    new_name="HistoricalTestExecution",
+                ),
+            ],
+            database_operations=[],
         ),
         migrations.AlterModelOptions(
             name="historicaltestexecution",

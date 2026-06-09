@@ -1,11 +1,14 @@
 from http import HTTPStatus
 
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponseForbidden
 from django.test import TestCase, modify_settings
-from guardian.utils import get_anonymous_user
 
 from tcms.tests import LoggedInTestCase
+
+User = get_user_model()
 
 
 @modify_settings(
@@ -15,11 +18,11 @@ class TestAnonymousViewBackend(TestCase):
     """Test AnonymousViewBackend.has_perm method"""
 
     def test_has_perm(self):
-        user = get_anonymous_user()
+        user, _ = User.objects.get_or_create(username=settings.ANONYMOUS_USER_NAME)
         self.assertTrue(user.has_perm("testruns.view_testrun"))
 
     def test_not_has_perm(self):
-        user = get_anonymous_user()
+        user, _ = User.objects.get_or_create(username=settings.ANONYMOUS_USER_NAME)
         self.assertFalse(user.has_perm("testruns.add_testrun"))
 
     def test_is_anonymous_has_perm(self):

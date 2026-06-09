@@ -5,7 +5,6 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
-from tcms.dao.firestore.firestore_classification_dao import firestore_classification_dao
 from tcms.dao.management.classification_dao import classification_dao
 from tcms.rpc.api.forms.management import ClassificationForm
 from tcms.rpc.decorators import permissions_required
@@ -24,7 +23,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: Serialized list of :class:`tcms.management.models.Classification` objects
         :rtype: dict
     """
-    return firestore_classification_dao.filter(query)
+    return classification_dao.filter(query)
 
 
 @rpc_method(name="Classification.create")
@@ -47,7 +46,6 @@ def create(values):
     if form.is_valid():
         classification = form.save()
         classification_dao.save(classification)
-        firestore_classification_dao.save(classification)
         return model_to_dict(classification)
 
     raise ValueError(list(form.errors.items()))

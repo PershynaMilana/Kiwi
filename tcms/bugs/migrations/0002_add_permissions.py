@@ -9,22 +9,29 @@ def forwards_add_perms(apps, schema_editor):
     """
     group_model = apps.get_model("auth", "Group")
     permission_model = apps.get_model("auth", "Permission")
+    content_type_model = apps.get_model("contenttypes", "ContentType")
 
     tester = group_model.objects.get(name="Tester")
-    app_perms = permission_model.objects.filter(
-        content_type__app_label__contains="bugs"
+    ct_ids = list(
+        content_type_model.objects.filter(app_label="bugs").values_list("pk", flat=True)
     )
-    tester.permissions.add(*app_perms)
+    if ct_ids:
+        app_perms = list(permission_model.objects.filter(content_type_id__in=ct_ids))
+        tester.permissions.add(*app_perms)
 
 
 def backwards(apps, schema_editor):
     group_model = apps.get_model("auth", "Group")
     permission_model = apps.get_model("auth", "Permission")
+    content_type_model = apps.get_model("contenttypes", "ContentType")
+
     tester = group_model.objects.get(name="Tester")
-    app_perms = permission_model.objects.filter(
-        content_type__app_label__contains="bugs"
+    ct_ids = list(
+        content_type_model.objects.filter(app_label="bugs").values_list("pk", flat=True)
     )
-    tester.permissions.remove(*app_perms)
+    if ct_ids:
+        app_perms = list(permission_model.objects.filter(content_type_id__in=ct_ids))
+        tester.permissions.remove(*app_perms)
 
 
 class Migration(migrations.Migration):

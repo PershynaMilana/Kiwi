@@ -144,28 +144,42 @@ class TestPlan(TreeNode, UrlMixin):
             tp_dest.add_tag(tag=tp_tag_src)
 
         # include TCs inside cloned TP
-        qs = self.cases.all().annotate(sortkey=models.F("testcaseplan__sortkey"))
-        for tc_src in qs:
-            # this parameter should really be named clone_testcases b/c if set
-            # it clones the source TC and then adds it to the new TP
+        sortkey_map = {tcp.case_id: tcp.sortkey for tcp in TestCasePlan.objects.filter(plan=self)}
+        for tc_src in self.cases.all():
+            tc_src.sortkey = sortkey_map.get(tc_src.pk, 0)
             if copy_testcases:
                 tc_src.clone(new_author, [tp_dest])
             else:
-                # otherwise just link the existing TC to the new TP
                 tp_dest.add_case(tc_src, sortkey=tc_src.sortkey)
 
         return tp_dest
 
     def tree_as_list(self):
         """
-        Returns the entire tree family as a list of TestPlan
-        object with additional fields from tree_queries!
+        Returns the entire tree family as a DFS-ordered list of TestPlan objects
+        with tree_depth set on each node. Does not use WITH RECURSIVE CTEs.
         """
-        plan = TestPlan.objects.with_tree_fields().get(pk=self.pk)
+        # Walk up to the root
+        current_id = self.pk
+        parent_id = self.parent_id
+        visited = {current_id}
+        while parent_id and parent_id not in visited:
+            visited.add(parent_id)
+            ancestor = TestPlan.objects.get(pk=parent_id)
+            current_id = ancestor.pk
+            parent_id = ancestor.parent_id
+        root = TestPlan.objects.get(pk=current_id)
 
-        tree_root = plan.ancestors(include_self=True).first()
-        result = tree_root.descendants(include_self=True)
+        # DFS traversal, setting tree_depth on each node
+        result = []
 
+        def _dfs(plan, depth):
+            plan.tree_depth = depth
+            result.append(plan)
+            for child in TestPlan.objects.filter(parent_id=plan.pk).order_by("pk"):
+                _dfs(child, depth + 1)
+
+        _dfs(root, 0)
         return result
 
     def tree_view_html(self):

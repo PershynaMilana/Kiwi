@@ -3,56 +3,30 @@
 from django.db import migrations, models
 
 
+STATUS_DEFAULTS = {
+    "FAILED": {"weight": -30, "color": "#cc0000", "icon": "fa fa-times-circle-o"},
+    "ERROR": {"weight": -20, "color": "#cc0000", "icon": "fa fa-minus-circle"},
+    "BLOCKED": {"weight": -10, "color": "#cc0000", "icon": "fa fa-stop-circle-o"},
+    "IDLE": {"weight": 0, "color": "#72767b", "icon": "fa fa-question-circle-o"},
+    "PAUSED": {"weight": 0, "color": "#72767b", "icon": "fa fa-pause-circle-o"},
+    "RUNNING": {"weight": 0, "color": "#72767b", "icon": "fa fa-play-circle-o"},
+    "WAIVED": {"weight": 10, "color": "#92d400", "icon": "fa fa-commenting-o"},
+    "PASSED": {"weight": 20, "color": "#92d400", "icon": "fa fa-check-circle-o"},
+}
+
+
 def insert_default_values(apps, schema_editor):
     test_execution_status_model = apps.get_model("testruns", "TestExecutionStatus")
 
-    failed = test_execution_status_model.objects.get(name="FAILED")
-    failed.weight = -30
-    failed.color = "#cc0000"
-    failed.icon = "fa fa-times-circle-o"
-    failed.save()
-
-    error = test_execution_status_model.objects.get(name="ERROR")
-    error.weight = -20
-    error.color = "#cc0000"
-    error.icon = "fa fa-minus-circle"
-    error.save()
-
-    blocked = test_execution_status_model.objects.get(name="BLOCKED")
-    blocked.weight = -10
-    blocked.color = "#cc0000"
-    blocked.icon = "fa fa-stop-circle-o"
-    blocked.save()
-
-    idle = test_execution_status_model.objects.get(name="IDLE")
-    idle.weight = 0
-    idle.color = "#72767b"
-    idle.icon = "fa fa-question-circle-o"
-    idle.save()
-
-    paused = test_execution_status_model.objects.get(name="PAUSED")
-    paused.weight = 0
-    paused.color = "#72767b"
-    paused.icon = "fa fa-pause-circle-o"
-    paused.save()
-
-    running = test_execution_status_model.objects.get(name="RUNNING")
-    running.weight = 0
-    running.color = "#72767b"
-    running.icon = "fa fa-play-circle-o"
-    running.save()
-
-    waived = test_execution_status_model.objects.get(name="WAIVED")
-    waived.weight = 10
-    waived.color = "#92d400"
-    waived.icon = "fa fa-commenting-o"
-    waived.save()
-
-    passed = test_execution_status_model.objects.get(name="PASSED")
-    passed.weight = 20
-    passed.color = "#92d400"
-    passed.icon = "fa fa-check-circle-o"
-    passed.save()
+    existing = {s.name: s for s in test_execution_status_model.objects.all()}
+    for name, attrs in STATUS_DEFAULTS.items():
+        if name in existing:
+            status = existing[name]
+            for key, val in attrs.items():
+                setattr(status, key, val)
+            status.save()
+        else:
+            test_execution_status_model.objects.create(name=name, **attrs)
 
 
 class Migration(migrations.Migration):

@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from tcms.core.forms.fields import UserField
 from tcms.management.models import Build, Product, Version
 from tcms.rpc.api.forms import DateTimeField
-from tcms.testcases.models import TestCase
+from tcms.testcases.models import TestCase, TestCaseStatus
 from tcms.testruns.models import Environment, TestRun
 
 User = get_user_model()  # pylint: disable=invalid-name
@@ -54,21 +54,26 @@ class NewRunForm(forms.ModelForm):
             self.fields["plan"].queryset = self.fields["plan"].queryset.filter(
                 pk=plan_id
             )
-            self.fields["product"].queryset = Product.objects.filter(
-                pk=self.fields["plan"].queryset.first().product_id,
-            )
-            self.fields["build"].queryset = Build.objects.filter(
-                version_id=self.fields["plan"].queryset.first().product_version_id,
-                is_active=True,
-            )
+            plan = self.fields["plan"].queryset.first()
+            self.fields["product"].queryset = Product.objects.filter(pk=plan.product_id)
+            # Python post-filter avoids needing (version_id, is_active, name) composite index
+            active_build_ids = [
+                b.pk for b in Build.objects.filter(version_id=plan.product_version_id)
+                if b.is_active
+            ]
+            self.fields["build"].queryset = Build.objects.filter(pk__in=active_build_ids)
         else:
             # these are dynamically filtered via JavaScript
             self.fields["plan"].queryset = self.fields["plan"].queryset.none()
             self.fields["build"].queryset = Build.objects.none()
 
+        # Decompose cross-collection filter: TestCase → TestCaseStatus (no JOINs in Firestore)
+        confirmed_status_ids = list(
+            TestCaseStatus.objects.filter(is_confirmed=True).values_list("pk", flat=True)
+        )
         self.fields["case"].queryset = TestCase.objects.filter(
-            case_status__is_confirmed=True
-        ).all()
+            case_status_id__in=confirmed_status_ids
+        )
 
 
 class SearchRunForm(forms.ModelForm):
@@ -87,9 +92,9 @@ class SearchRunForm(forms.ModelForm):
 
     def populate(self, product_id=None):
         if product_id:
-            self.fields["version"].queryset = Version.objects.filter(
-                product__pk=product_id
+            self.fields["version"].queryset = Version.objects.filter(product_id=product_id)
+            # Decompose two-hop FK Build→Version→Product (no cross-join support in Firestore)
+            version_ids = list(
+                Version.objects.filter(product_id=product_id).values_list("pk", flat=True)
             )
-            self.fields["build"].queryset = Build.objects.filter(
-                version__product=product_id
-            )
+            self.fields["build"].queryset = Build.objects.filter(version_id__in=version_ids)
