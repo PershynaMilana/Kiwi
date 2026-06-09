@@ -8,7 +8,6 @@ from tcms.bugs.forms import NewBugFromRPCForm, SeverityForm
 from tcms.bugs.models import Bug, Severity
 from tcms.core.helpers import comments
 from tcms.dao.bugs.bug_dao import bug_dao
-from tcms.dao.firestore.firestore_bug_dao import firestore_bug_dao
 from tcms.dao.testruns.test_execution_dao import test_execution_dao
 from tcms.management.models import Tag
 from tcms.rpc import utils
@@ -35,8 +34,9 @@ def add_tag(bug_id, tag, **kwargs):
                  doesn't exist in the database!
     """
     request = kwargs.get(REQUEST_KEY)
-    tag, _ = Tag.get_or_create(request.user, tag)
-    bug_dao.get_by_id(bug_id).tags.add(tag)
+    from tcms.dao.shared.tag_dao import tag_dao as _tag_dao
+    tag, _ = _tag_dao.get_or_create(request.user, tag)
+    Bug.tags.through.objects.get_or_create(bug_id=int(bug_id), tag_id=tag.pk)
 
 
 @permissions_required("bugs.delete_bug_tags")
@@ -54,7 +54,8 @@ def remove_tag(bug_id, tag):
         :raises PermissionDenied: if missing *bugs.delete_bug_tags* permission
         :raises DoesNotExist: if objects specified don't exist
     """
-    bug_dao.get_by_id(bug_id).tags.remove(Tag.objects.get(name=tag))
+    tag_obj = Tag.objects.get(name=tag)
+    Bug.tags.through.objects.filter(bug_id=int(bug_id), tag_id=tag_obj.pk).delete()
 
 
 @permissions_required("bugs.delete_bug")
@@ -69,7 +70,7 @@ def remove(query):
         :type query: dict
         :raises PermissionDenied: if missing *bugs.delete_bugtag* permission
     """
-    firestore_bug_dao.remove(query)
+    bug_dao.remove(query)
 
 
 @permissions_required("bugs.view_bug")
@@ -85,7 +86,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: List of serialized :class:`tcms.bugs.models.Bug` objects.
         :rtype: list
     """
-    return firestore_bug_dao.filter_with_names(query)
+    return bug_dao.filter_with_names(query)
 
 
 @permissions_required("bugs.view_bug")
@@ -103,7 +104,7 @@ def filter_canonical(query):  # pylint: disable=redefined-builtin
 
     .. versionadded:: 15.3
     """
-    return firestore_bug_dao.filter_canonical(query)
+    return bug_dao.filter_canonical(query)
 
 
 @permissions_required("bugs.add_bug")
@@ -141,7 +142,6 @@ def create(values, **kwargs):
         if "created_at" in form.cleaned_data:
             bug.created_at = form.cleaned_data["created_at"]
         bug_dao.save(bug)
-        firestore_bug_dao.save(bug)
 
         result = model_to_dict(bug)
         if "created_at" not in result:
@@ -176,7 +176,6 @@ def severity_filter(query):  # pylint: disable=redefined-builtin
             "icon",
             "color",
         )
-        .distinct()
     )
     return list(result)
 

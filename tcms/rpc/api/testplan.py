@@ -4,11 +4,9 @@ from django.forms.models import model_to_dict
 from modernrpc.core import REQUEST_KEY, rpc_method
 
 from tcms.dao.shared.attachment_dao import attachment_dao
-from tcms.dao.firestore.firestore_tag_dao import firestore_tag_dao
 from tcms.dao.shared.tag_dao import tag_dao
 from tcms.dao.testcases.test_case_dao import test_case_dao
 from tcms.dao.testplans.test_plan_dao import test_plan_dao
-from tcms.dao.firestore.firestore_test_plan_dao import firestore_test_plan_dao
 from tcms.rpc.api.forms.testplan import EditPlanForm, NewPlanAPIForm
 from tcms.rpc.decorators import permissions_required
 
@@ -62,7 +60,6 @@ def create(values, **kwargs):
             test_plan.save()
 
         test_plan_dao.save(test_plan)
-        firestore_test_plan_dao.save(test_plan)
         result = model_to_dict(test_plan, exclude=["tag"])
 
         # b/c value is set in the DB directly and if None
@@ -90,7 +87,7 @@ def filter(query=None):  # pylint: disable=redefined-builtin
     if query is None:
         query = {}
 
-    return firestore_test_plan_dao.filter(query)
+    return test_plan_dao.filter(query)
 
 
 @permissions_required("testplans.add_testplantag")
@@ -116,7 +113,6 @@ def add_tag(plan_id, tag_name, **kwargs):
     tag_obj, _ = tag_dao.get_or_create(request.user, tag_name)
     plan = test_plan_dao.get_by_id(plan_id)
     tag_dao.add_tag(plan, tag_obj)
-    firestore_tag_dao.add_tag(plan, tag_obj)
 
 
 @permissions_required("testplans.delete_testplantag")
@@ -137,7 +133,6 @@ def remove_tag(plan_id, tag_name):
     tag_obj = tag_dao.get_by_name(tag_name)
     plan = test_plan_dao.get_by_id(plan_id)
     tag_dao.remove_tag(plan, tag_obj)
-    firestore_tag_dao.remove_tag(plan, tag_obj)
 
 
 @permissions_required("testplans.change_testplan")
@@ -163,7 +158,6 @@ def update(plan_id, values):
     if form.is_valid():
         test_plan = form.save()
         test_plan_dao.save(test_plan)
-        firestore_test_plan_dao.save(test_plan)
         result = model_to_dict(test_plan, exclude=["tag"])
 
         # b/c value is set in the DB directly and if None

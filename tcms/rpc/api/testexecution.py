@@ -8,7 +8,6 @@ from tcms.dao.shared.attachment_dao import attachment_dao
 from tcms.dao.shared.comment_dao import comment_dao
 from tcms.dao.shared.property_dao import testexecution_property_dao
 from tcms.dao.testruns.link_reference_dao import link_reference_dao
-from tcms.dao.firestore.firestore_test_execution_dao import firestore_test_execution_dao
 from tcms.dao.testruns.test_execution_dao import test_execution_dao
 from tcms.dao.user_dao import user_dao
 from tcms.rpc.api.forms.testexecution import LinkReferenceForm
@@ -112,7 +111,7 @@ def filter(query):  # pylint: disable=redefined-builtin
         :return: List of serialized :class:`tcms.testruns.models.TestExecution` objects
         :rtype: list(dict)
     """
-    return firestore_test_execution_dao.filter(query)
+    return test_execution_dao.filter(query)
 
 
 @permissions_required("testruns.view_historicaltestexecution")
@@ -130,16 +129,7 @@ def history(execution_id):
         :raises PermissionDenied: if missing *testruns.view_testexecution* permission
     """
     execution = test_execution_dao.get_by_id(execution_id)
-    execution_history = (
-        execution.history.all()
-        .order_by("-history_date")
-        .values(
-            "history_user__username",
-            "history_change_reason",
-            "history_date",
-        )
-    )
-    return list(execution_history)
+    return test_execution_dao.history(execution)
 
 
 @permissions_required("testruns.change_testexecution")
@@ -175,9 +165,8 @@ def update(execution_id, values, **kwargs):
     form = UpdateExecutionForm(values, instance=test_execution)
 
     if form.is_valid():
-        test_execution = form.save()
+        test_execution = form.save(commit=False)
         test_execution_dao.save(test_execution)
-        firestore_test_execution_dao.save(test_execution)
     else:
         raise ValueError(list(form.errors.items()))
 
@@ -300,7 +289,7 @@ def properties(query):
     return testexecution_property_dao.filter(
         query,
         value_fields=("id", "name", "value", "execution"),
-        order_by=("execution", "name", "value"),
+        order_by=("execution_id", "name", "value"),
     )
 
 
@@ -415,9 +404,8 @@ def create(values, **kwargs):
     form = NewExecutionForm(values)
 
     if form.is_valid():
-        test_execution = form.save()
+        test_execution = form.save(commit=False)
         test_execution_dao.save(test_execution)
-        firestore_test_execution_dao.save(test_execution)
         return model_to_dict(test_execution)
 
     raise ValueError(list(form.errors.items()))

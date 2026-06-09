@@ -11,7 +11,6 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import DetailView
 from django.views.generic.base import TemplateView, View
 from django.views.generic.edit import UpdateView
-from guardian.decorators import permission_required as object_permission_required
 
 from tcms.core.contrib.linkreference.forms import LinkReferenceForm
 from tcms.core.forms import SimpleCommentForm
@@ -19,17 +18,17 @@ from tcms.dao.testcases.bug_system_dao import bug_system_dao
 from tcms.dao.testcases.test_case_dao import test_case_dao
 from tcms.dao.testcases.test_case_status_dao import test_case_status_dao
 from tcms.dao.testplans.test_plan_dao import test_plan_dao
+from tcms.dao.utils import chunked_queryset
 from tcms.dao.testruns.environment_dao import environment_property_dao
 from tcms.dao.testruns.test_execution_status_dao import test_execution_status_dao
-from tcms.dao.firestore.firestore_test_execution_dao import firestore_test_execution_dao
-from tcms.dao.firestore.firestore_test_run_dao import firestore_test_run_dao
 from tcms.dao.testruns.test_run_dao import test_run_dao
-from tcms.testcases.models import TestCase, TestCasePlan
+from tcms.testcases.models import TestCase, TestCasePlan, TestCaseStatus
 from tcms.testplans.models import TestPlan
 from tcms.testruns.forms import NewRunForm, SearchRunForm
 from tcms.testruns.models import (
     Environment,
     TestRun,
+    TestRunCC,
 )
 
 User = get_user_model()  # pylint: disable=invalid-name
@@ -79,9 +78,8 @@ class NewTestRunView(View):
         form.populate(request.POST.get("plan"))
 
         if form.is_valid():
-            test_run = form.save()
+            test_run = form.save(commit=False)
             test_run_dao.save(test_run)
-            firestore_test_run_dao.save(test_run)
 
             # copy all of the selected properties into the test run
             for prop in environment_property_dao.filter_objects(
@@ -100,13 +98,12 @@ class NewTestRunView(View):
                 except ObjectDoesNotExist:
                     sortkey = loop * 10
 
-                for execution in test_run.create_execution(
+                test_run.create_execution(
                     case=case,
                     assignee=form.cleaned_data["default_tester"],
                     sortkey=sortkey,
                     matrix_type=form.cleaned_data["matrix_type"],
-                ):
-                    firestore_test_execution_dao.save(execution)
+                )
                 loop += 1
 
             return HttpResponseRedirect(
@@ -153,12 +150,18 @@ class NewFromPlan(NewTestRunView):
         # if cases aren't selected, e.g. user entered the URL directly in the browser
         # then preselect all confirmed test cases
         if not request.GET.getlist("c"):
-            request.GET.setlist(
-                "c",
-                test_plan.cases.filter(case_status__is_confirmed=True).values_list(
-                    "pk", flat=True
-                ),
+            confirmed_status_ids = set(
+                TestCaseStatus.objects.filter(is_confirmed=True).values_list("pk", flat=True)
             )
+            plan_case_ids = list(
+                TestCasePlan.objects.filter(plan_id=test_plan.pk).values_list("case_id", flat=True)
+            )
+            confirmed_case_ids = [
+                case.pk
+                for case in chunked_queryset(TestCase, "pk", plan_case_ids)
+                if case.case_status_id in confirmed_status_ids
+            ]
+            request.GET.setlist("c", confirmed_case_ids)
 
         return super().get(request)
 
@@ -177,9 +180,7 @@ class SearchTestRunView(TemplateView):
 
 
 @method_decorator(
-    object_permission_required(
-        "testruns.view_testrun", (TestRun, "pk", "pk"), accept_global_perms=True
-    ),
+    permission_required("testruns.view_testrun"),
     name="dispatch",
 )
 class GetTestRunView(DetailView):
@@ -194,6 +195,12 @@ class GetTestRunView(DetailView):
         context["link_form"] = LinkReferenceForm()
         context["bug_trackers"] = bug_system_dao.filter_objects({})
         context["comment_form"] = SimpleCommentForm()
+        # Pre-fetch CC users to avoid M2M cross-join in template (object.cc.all traverses
+        # two Firestore collections).
+        cc_user_ids = list(
+            TestRunCC.objects.filter(run_id=self.object.pk).values_list("user_id", flat=True)
+        )
+        context["cc_users"] = list(User.objects.filter(pk__in=cc_user_ids)) if cc_user_ids else []
         context["OBJECT_MENU_ITEMS"] = [
             (
                 "...",
@@ -212,14 +219,6 @@ class GetTestRunView(DetailView):
                     ),
                     ("-", "-"),
                     (
-                        _("Object permissions"),
-                        reverse(
-                            "admin:testruns_testrun_permissions",
-                            args=[self.object.pk],
-                        ),
-                    ),
-                    ("-", "-"),
-                    (
                         _("Delete"),
                         reverse(
                             "admin:testruns_testrun_delete",
@@ -234,9 +233,7 @@ class GetTestRunView(DetailView):
 
 
 @method_decorator(
-    object_permission_required(
-        "testruns.change_testrun", (TestRun, "pk", "pk"), accept_global_perms=True
-    ),
+    permission_required("testruns.change_testrun"),
     name="dispatch",
 )
 class EditTestRunView(UpdateView):
@@ -292,13 +289,14 @@ class CloneTestRunView(NewTestRunView):
 
 
 def get_disabled_test_cases_count(test_cases):
-    return test_cases.filter(case_status__is_confirmed=False).count()
+    unconfirmed_ids = list(
+        TestCaseStatus.objects.filter(is_confirmed=False).values_list("pk", flat=True)
+    )
+    return test_cases.filter(case_status_id__in=unconfirmed_ids).count()
 
 
 @method_decorator(
-    object_permission_required(
-        "testruns.view_environment", (Environment, "pk", "pk"), accept_global_perms=True
-    ),
+    permission_required("testruns.view_environment"),
     name="dispatch",
 )
 class GetEnvironment(DetailView):
@@ -316,14 +314,6 @@ class GetEnvironment(DetailView):
                         _("Edit"),
                         reverse(
                             "admin:testruns_environment_change",
-                            args=[self.object.pk],
-                        ),
-                    ),
-                    ("-", "-"),
-                    (
-                        _("Object permissions"),
-                        reverse(
-                            "admin:testruns_environment_permissions",
                             args=[self.object.pk],
                         ),
                     ),

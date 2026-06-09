@@ -5,12 +5,15 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
-from tcms.core.admin import ObjectPermissionsAdminMixin
+from tcms.core.admin import ObjectPermissionsAdminMixin, SafePkAdminMixin
 from tcms.core.history import ReadOnlyHistoryAdmin
 from tcms.testruns.models import Environment, TestExecutionStatus, TestRun
 
 
 class TestRunAdmin(ObjectPermissionsAdminMixin, ReadOnlyHistoryAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     def add_view(self, request, form_url="", extra_context=None):
         return HttpResponseRedirect(reverse("admin:testruns_testrun_changelist"))
 
@@ -34,7 +37,10 @@ class TestRunAdmin(ObjectPermissionsAdminMixin, ReadOnlyHistoryAdmin):
         return HttpResponseRedirect(reverse("testruns-get", args=[object_id]))
 
 
-class TestExecutionStatusAdmin(admin.ModelAdmin):
+class TestExecutionStatusAdmin(SafePkAdminMixin, admin.ModelAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     _for_more_info = _(
         """For more information about customizing test execution statuses see
         <a href="https://kiwitcms.readthedocs.io/en/latest/admin.html#test-execution-statuses">
@@ -102,13 +108,18 @@ class TestExecutionStatusAdmin(admin.ModelAdmin):
         return super().delete_view(request, object_id, extra_context)
 
 
-class EnvironmentAdmin(ObjectPermissionsAdminMixin, admin.ModelAdmin):
+class EnvironmentAdmin(SafePkAdminMixin, ObjectPermissionsAdminMixin, admin.ModelAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     _edit_properties_text = _("Edit parameters")
 
     list_display = ("id", "name", "properties_link")
     search_fields = ("name",)
 
     def properties_link(self, obj):
+        if not isinstance(obj.id, int):
+            return None
         url = reverse("testruns-environment", args=[obj.id])
         return format_html(
             f"<a href='{url}'>{self._edit_properties_text}</a>",

@@ -57,8 +57,11 @@ Additional info:"""
             self.fields["version"].queryset = Version.objects.filter(
                 product_id=product_id
             )
+            version_ids = list(
+                Version.objects.filter(product_id=product_id).values_list("pk", flat=True)
+            )
             self.fields["build"].queryset = Build.objects.filter(
-                version__product=product_id
+                version_id__in=version_ids
             )
         else:
             self.fields["version"].queryset = Version.objects.all()

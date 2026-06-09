@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils.module_loading import import_string
 from django.utils.translation import gettext_lazy as _
 
-from tcms.core.admin import ObjectPermissionsAdminMixin
+from tcms.core.admin import ObjectPermissionsAdminMixin, SafePkAdminMixin
 from tcms.core.history import ReadOnlyHistoryAdmin
 from tcms.core.widgets import SimpleMDE
 from tcms.testcases.models import (
@@ -23,7 +23,10 @@ from tcms.testcases.models import (
 )
 
 
-class TestCaseStatusAdmin(admin.ModelAdmin):
+class TestCaseStatusAdmin(SafePkAdminMixin, admin.ModelAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     _for_more_info = _(
         """For more information about customizing test case statuses see
         <a href="https://kiwitcms.readthedocs.io/en/latest/admin.html#test-case-statuses">
@@ -64,6 +67,9 @@ class TestCaseStatusAdmin(admin.ModelAdmin):
 
 
 class TestCaseAdmin(ObjectPermissionsAdminMixin, ReadOnlyHistoryAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     def add_view(self, request, form_url="", extra_context=None):
         return HttpResponseRedirect(reverse("testcases-new"))
 
@@ -71,7 +77,10 @@ class TestCaseAdmin(ObjectPermissionsAdminMixin, ReadOnlyHistoryAdmin):
         return HttpResponseRedirect(reverse("testcases-get", args=[object_id]))
 
 
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(SafePkAdminMixin, admin.ModelAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     search_fields = ("name",)
     list_display = ("id", "name", "product", "description")
     list_filter = ("product",)
@@ -137,7 +146,10 @@ class BugSystemAdminForm(forms.ModelForm):
         fields = "__all__"
 
 
-class BugSystemAdmin(admin.ModelAdmin):
+class BugSystemAdmin(SafePkAdminMixin, admin.ModelAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     search_fields = ("name",)
     list_display = ("id", "name", "base_url")
     fieldsets = [
@@ -246,7 +258,10 @@ class TemplateAdminForm(forms.ModelForm):
         ]
 
 
-class TemplateAdmin(admin.ModelAdmin):
+class TemplateAdmin(SafePkAdminMixin, admin.ModelAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     form = TemplateAdminForm
 
 

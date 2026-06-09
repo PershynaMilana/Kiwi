@@ -1,0 +1,105 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "django_comments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "content_type_id", "order": "ASCENDING"},
+        {"fieldPath": "is_public",       "order": "ASCENDING"},
+        {"fieldPath": "is_removed",      "order": "ASCENDING"},
+        {"fieldPath": "object_pk",       "order": "ASCENDING"},
+        {"fieldPath": "site_id",         "order": "ASCENDING"},
+        {"fieldPath": "submit_date",     "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "management_product",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "classification_id", "order": "ASCENDING"},
+        {"fieldPath": "name",              "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "management_build",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "is_active",   "order": "ASCENDING"},
+        {"fieldPath": "version_id",  "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "testcases_testcaseplan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "plan_id",  "order": "ASCENDING"},
+        {"fieldPath": "sortkey",  "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "testcases_historicaltestcase",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "id",           "order": "ASCENDING"},
+        {"fieldPath": "history_date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "testcases_historicaltemplate",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "id",           "order": "ASCENDING"},
+        {"fieldPath": "history_date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "testplans_historicaltestplan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "id",           "order": "ASCENDING"},
+        {"fieldPath": "history_date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "testruns_historicaltestrun",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "id",           "order": "ASCENDING"},
+        {"fieldPath": "history_date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "testruns_historicaltestexecution",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "id",           "order": "ASCENDING"},
+        {"fieldPath": "history_date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "management_historicalproduct",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "id",           "order": "ASCENDING"},
+        {"fieldPath": "history_date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "management_historicalversion",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "id",           "order": "ASCENDING"},
+        {"fieldPath": "history_date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "management_historicalbuild",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "id",           "order": "ASCENDING"},
+        {"fieldPath": "history_date", "order": "DESCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

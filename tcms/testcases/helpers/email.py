@@ -68,6 +68,10 @@ def email_case_deletion(case):
 
 
 def get_case_notification_recipients(case):
+    from django.contrib.auth import get_user_model
+    from tcms.testruns.models import TestRun
+
+    User = get_user_model()
     recipients = set()
 
     if case.emailing.auto_to_case_author and case.author.is_active:
@@ -80,24 +84,41 @@ def get_case_notification_recipients(case):
     ):
         recipients.add(case.default_tester.email)
 
-    if case.emailing.auto_to_run_manager:
-        managers = case.executions.filter(run__manager__is_active=True).values_list(
-            "run__manager__email", flat=True
-        )
-        recipients.update(managers)  # pylint: disable=objects-update-used
+    need_runs = case.emailing.auto_to_run_manager or case.emailing.auto_to_run_tester
+    need_assignees = case.emailing.auto_to_execution_assignee
 
-    if case.emailing.auto_to_run_tester:
-        run_testers = case.executions.filter(
-            run__default_tester__is_active=True
-        ).values_list("run__default_tester__email", flat=True)
-        recipients.update(run_testers)  # pylint: disable=objects-update-used
+    if need_runs or need_assignees:
+        executions = list(case.executions.values("run_id", "assignee_id"))
 
-    if case.emailing.auto_to_execution_assignee:
-        assignees = case.executions.filter(assignee__is_active=True).values_list(
-            "assignee__email", flat=True
-        )
-        recipients.update(assignees)  # pylint: disable=objects-update-used
+        if need_runs:
+            run_ids = list({e["run_id"] for e in executions if e["run_id"] is not None})
+            if run_ids:
+                runs = list(TestRun.objects.filter(pk__in=run_ids).values("manager_id", "default_tester_id"))
+
+                if case.emailing.auto_to_run_manager:
+                    manager_ids = [r["manager_id"] for r in runs if r["manager_id"] is not None]
+                    if manager_ids:
+                        recipients.update(
+                            User.objects.filter(pk__in=manager_ids, is_active=True).values_list("email", flat=True)
+                        )
+
+                if case.emailing.auto_to_run_tester:
+                    tester_ids = [r["default_tester_id"] for r in runs if r["default_tester_id"] is not None]
+                    if tester_ids:
+                        recipients.update(
+                            User.objects.filter(pk__in=tester_ids, is_active=True).values_list("email", flat=True)
+                        )
+
+        if need_assignees:
+            assignee_ids = [e["assignee_id"] for e in executions if e["assignee_id"] is not None]
+            if assignee_ids:
+                recipients.update(
+                    User.objects.filter(pk__in=assignee_ids, is_active=True).values_list("email", flat=True)
+                )
 
     # don't email author of last change
-    recipients.discard(getattr(case.history.latest().history_user, "email", ""))
+    try:
+        recipients.discard(getattr(case.history.latest().history_user, "email", ""))
+    except Exception:
+        pass
     return list(filter(None, recipients))

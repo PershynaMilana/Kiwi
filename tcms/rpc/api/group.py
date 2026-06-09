@@ -2,8 +2,6 @@
 #
 # Licensed under the GPL 2.0: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
-from django.db.models import Value
-from django.db.models.functions import Concat
 from modernrpc.core import rpc_method
 
 from tcms.dao.kiwi_auth.group_dao import group_dao
@@ -47,14 +45,7 @@ def permissions(group_id):  # pylint: disable=redefined-builtin
     .. versionadded:: 15.3
     """
     group = group_dao.get_by_id(group_id)
-
-    return list(
-        group.permissions.annotate(
-            perm_name=Concat("content_type__app_label", Value("."), "codename")
-        )
-        .values_list("perm_name", flat=True)
-        .distinct()
-    )
+    return group_dao.permissions(group)
 
 
 @permissions_required(("auth.view_group", "auth.view_user"))
@@ -76,10 +67,4 @@ def users(group_id):  # pylint: disable=redefined-builtin
     .. versionadded:: 15.3
     """
     group = group_dao.get_by_id(group_id)
-
-    return list(
-        group.user_set.values(
-            "id",
-            "username",
-        ).distinct()
-    )
+    return group_dao.users(group)

@@ -1,0 +1,7 @@
+auth_user:
+  username:
+    - startswith
+    - icontains
+  email:
+    - startswith
+    - icontains

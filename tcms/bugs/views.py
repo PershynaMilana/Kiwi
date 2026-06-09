@@ -11,20 +11,17 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import DetailView
 from django.views.generic.base import TemplateView, View
 from django.views.generic.edit import CreateView, UpdateView
-from guardian.decorators import permission_required as object_permission_required
 
 from tcms.bugs.forms import BugCommentForm, NewBugForm
 from tcms.bugs.models import Bug
 from tcms.core.helpers.comments import add_comment
 from tcms.dao.bugs.bug_dao import bug_dao
-from tcms.dao.firestore.firestore_bug_dao import firestore_bug_dao
 from tcms.dao.management.component_dao import component_dao
+from tcms.testruns.models import TestExecution
 
 
 @method_decorator(
-    object_permission_required(
-        "bugs.view_bug", (Bug, "pk", "pk"), accept_global_perms=True
-    ),
+    permission_required("bugs.view_bug"),
     name="dispatch",
 )
 class Get(DetailView):
@@ -36,17 +33,23 @@ class Get(DetailView):
         context = super().get_context_data(**kwargs)
         context["comment_form"] = BugCommentForm()
         context["comment_form"].populate(self.object.pk)
-        context["executions"] = self.object.executions.all()
+        # Avoid M2M cross-join: resolve Bug→TestExecution via junction table.
+        execution_ids = list(
+            Bug.executions.through.objects
+            .filter(bug_id=self.object.pk)
+            .values_list("testexecution_id", flat=True)
+        )
+        if execution_ids:
+            context["executions"] = TestExecution.objects.filter(
+                pk__in=execution_ids
+            ).order_by("run_id")
+        else:
+            context["executions"] = TestExecution.objects.none()
         context["OBJECT_MENU_ITEMS"] = [
             (
                 "...",
                 [
                     (_("Edit"), reverse("bugs-edit", args=[self.object.pk])),
-                    ("-", "-"),
-                    (
-                        _("Object permissions"),
-                        reverse("admin:bugs_bug_permissions", args=[self.object.pk]),
-                    ),
                     ("-", "-"),
                     (
                         _("Delete"),
@@ -94,7 +97,6 @@ class New(CreateView):
             self.object.save()
         add_comment([self.object], form.cleaned_data["text"], self.request.user)
         bug_dao.save(self.object)
-        firestore_bug_dao.save(self.object)
 
         return response
 
@@ -152,16 +154,13 @@ class New(CreateView):
 
         bug = Bug(**data)
         bug_dao.save(bug)
-        firestore_bug_dao.save(bug)
         add_comment([bug], text, bug.reporter)
 
         return bug
 
 
 @method_decorator(
-    object_permission_required(
-        "bugs.change_bug", (Bug, "pk", "pk"), accept_global_perms=True
-    ),
+    permission_required("bugs.change_bug"),
     name="dispatch",
 )
 class Edit(UpdateView):
@@ -240,7 +239,6 @@ class AddComment(View):
                 bug.status = True
                 add_comment([bug], _("*bug reopened*"), request.user)
             bug_dao.save(bug)
-            firestore_bug_dao.save(bug)
 
             return HttpResponseRedirect(reverse("bugs-get", args=[bug.pk]))
 

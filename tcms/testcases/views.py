@@ -10,11 +10,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import DetailView
 from django.views.generic.base import TemplateView, View
 from django.views.generic.edit import CreateView, UpdateView
-from guardian.decorators import permission_required as object_permission_required
 
 from tcms.dao.testcases.template_dao import template_dao
-from tcms.dao.firestore.firestore_test_case_dao import firestore_test_case_dao
-from tcms.dao.testcases.test_case_dao import test_case_dao
 from tcms.signals import NEW_TEST_CASE_SIGNAL
 from tcms.testcases.forms import (
     CaseNotifyFormSet,
@@ -81,8 +78,6 @@ class NewCaseView(CreateView):
 
             notify_formset.instance = test_case
             notify_formset.save()
-            test_case_dao.save(test_case)
-            firestore_test_case_dao.save(test_case)
 
             NEW_TEST_CASE_SIGNAL.send(sender=test_case.__class__, instance=test_case)
 
@@ -115,9 +110,7 @@ class TestCaseSearchView(TemplateView):
 
 
 @method_decorator(
-    object_permission_required(
-        "testcases.view_testcase", (TestCase, "pk", "pk"), accept_global_perms=True
-    ),
+    permission_required("testcases.view_testcase"),
     name="dispatch",
 )
 class TestCaseGetView(DetailView):
@@ -127,9 +120,11 @@ class TestCaseGetView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["executions"] = self.object.executions.select_related(
-            "run", "tested_by", "assignee", "case", "status"
-        ).order_by("run__plan", "run")
+        context["executions"] = sorted(
+            # Filter out Firestore-corrupted rows where FK ids are strings
+            (e for e in self.object.executions.all() if isinstance(e.run_id, int) and isinstance(e.pk, int)),
+            key=lambda e: (e.run_id, e.pk),
+        )
         context["OBJECT_MENU_ITEMS"] = [
             (
                 "...",
@@ -148,14 +143,6 @@ class TestCaseGetView(DetailView):
                     ),
                     ("-", "-"),
                     (
-                        _("Object permissions"),
-                        reverse(
-                            "admin:testcases_testcase_permissions",
-                            args=[self.object.pk],
-                        ),
-                    ),
-                    ("-", "-"),
-                    (
                         _("Delete"),
                         reverse(
                             "admin:testcases_testcase_delete",
@@ -170,9 +157,7 @@ class TestCaseGetView(DetailView):
 
 
 @method_decorator(
-    object_permission_required(
-        "testcases.change_testcase", (TestCase, "pk", "pk"), accept_global_perms=True
-    ),
+    permission_required("testcases.change_testcase"),
     name="dispatch",
 )
 class EditTestCaseView(UpdateView):
@@ -184,9 +169,7 @@ class EditTestCaseView(UpdateView):
         notify_formset = CaseNotifyFormSet(self.request.POST, instance=self.object)
         if notify_formset.is_valid():
             notify_formset.save()
-            response = super().form_valid(form)
-            firestore_test_case_dao.save(self.object)
-            return response
+            return super().form_valid(form)
 
         # taken from FormMixin.form_invalid()
         return self.render_to_response(

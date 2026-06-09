@@ -3,7 +3,6 @@
 from django.forms.models import model_to_dict
 from modernrpc.core import rpc_method
 
-from tcms.dao.firestore.firestore_build_dao import firestore_build_dao
 from tcms.dao.management.build_dao import build_dao
 from tcms.rpc.api.forms.management import BuildForm, BuildUpdateForm
 from tcms.rpc.decorators import permissions_required
@@ -25,7 +24,7 @@ def filter(query=None):  # pylint: disable=redefined-builtin
 
     if query is None:
         query = {}
-    return firestore_build_dao.filter(query)
+    return build_dao.filter(query)
 
 
 @rpc_method(name="Build.create")
@@ -50,7 +49,6 @@ def create(values):
     if form.is_valid():
         build = form.save()
         build_dao.save(build)
-        firestore_build_dao.save(build)
         return model_to_dict(build)
 
     raise ValueError(list(form.errors.items()))
@@ -80,7 +78,6 @@ def update(build_id, values):
     if form.is_valid():
         build = form.save()
         build_dao.save(build)
-        firestore_build_dao.save(build)
         return model_to_dict(build)
 
     raise ValueError(list(form.errors.items()))

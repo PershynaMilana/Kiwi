@@ -2,6 +2,7 @@
 
 allpairspy==2.5.1
 firebase-admin==6.8.0
+django-gcloud-connectors==1.5.0
 bleach==6.3.0
 bleach-allowlist==1.0.3
 defusedxml==0.7.1
@@ -11,7 +12,6 @@ django-colorfield==0.14.0
 django-contrib-comments==2.2.0
 django-extensions==4.1
 django-grappelli==4.0.3
-django-guardian==3.2.0
 django-modern-rpc==1.1.0
 django-simple-history==3.11.0
 django-tree-queries==0.23.1

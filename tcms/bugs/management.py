@@ -76,39 +76,19 @@ def create_permissions(
     if not router.allow_migrate_model(using, Permission):
         return
 
-    # This will hold the permissions we're looking for as
-    # (content_type, (codename, name))
     searched_perms = []
-    # The codenames and ctypes that should exist.
-    ctypes = set()
     for klass in app_config.get_models(include_auto_created=True):
-        # Force looking up the content types in the current database
-        # before creating foreign keys to them.
         ctype = ContentType.objects.db_manager(using).get_for_model(
             klass, for_concrete_model=False
         )
-
-        ctypes.add(ctype)
         for perm in _get_all_permissions(klass._meta):
             searched_perms.append((ctype, perm))
 
-    # Find all the Permissions that have a content_type for a model we're
-    # looking for.  We don't need to check for codenames since we already have
-    # a list of the ones we're going to create.
-    all_perms = set(
-        Permission.objects.using(using)
-        .filter(
-            content_type__in=ctypes,
+    for ct, (codename, name) in searched_perms:
+        _, created = Permission.objects.using(using).get_or_create(
+            codename=codename,
+            content_type=ct,
+            defaults={"name": name},
         )
-        .values_list("content_type", "codename")
-    )
-
-    perms = [
-        Permission(codename=codename, name=name, content_type=ct)
-        for ct, (codename, name) in searched_perms
-        if (ct.pk, codename) not in all_perms
-    ]
-    Permission.objects.using(using).bulk_create(perms)
-    if verbosity >= 2:
-        for perm in perms:
-            print(f"Adding permission '{perm}'")
+        if created and verbosity >= 2:
+            print(f"Adding permission '{codename}'")

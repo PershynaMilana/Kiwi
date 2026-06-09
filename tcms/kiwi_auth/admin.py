@@ -20,6 +20,28 @@ def _modifying_myself(request, object_id):
     return request.user.pk == int(object_id)
 
 
+def _assign_safe_pk(obj):
+    """Assign a safe PK (< 2^31) when running on Firestore."""
+    from django.conf import settings
+    if getattr(settings, "USE_FIRESTORE_DAOS", False):
+        from tcms.dao.firestore.utils import generate_safe_pk
+        obj.pk = generate_safe_pk(obj.__class__)
+
+
+def _set_m2m_via_junction(ThroughModel, item_field, group_field, new_items, group_pk):
+    """
+    Replace all junction-table rows for a given group without reading back the
+    current set (which would generate a cross-join query in Firestore).
+
+    Deletes existing rows, then bulk-creates new ones.
+    """
+    ThroughModel.objects.filter(**{group_field: group_pk}).delete()
+    ThroughModel.objects.bulk_create([
+        ThroughModel(**{group_field: group_pk, item_field: item.pk})
+        for item in new_items
+    ])
+
+
 class GroupAdminForm(forms.ModelForm):
     class Meta:
         model = Group
@@ -35,14 +57,53 @@ class GroupAdminForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["users"].label = _("Users")
         if self.instance.pk:
-            self.fields["users"].initial = self.instance.user_set.all()
+            try:
+                # Avoid M2M cross-join: query junction table directly, then filter by pk__in.
+                user_ids = list(
+                    User.groups.through.objects
+                    .filter(group_id=self.instance.pk)
+                    .values_list("user_id", flat=True)
+                )
+                self.fields["users"].initial = User.objects.filter(pk__in=user_ids)
+            except Exception:
+                self.fields["users"].initial = []
+
+            try:
+                # Same fix for permissions M2M — avoid cross-join via junction table.
+                perm_ids = list(
+                    Group.permissions.through.objects
+                    .filter(group_id=self.instance.pk)
+                    .values_list("permission_id", flat=True)
+                )
+                self.fields["permissions"].initial = Permission.objects.filter(pk__in=perm_ids)
+            except Exception:
+                self.fields["permissions"].initial = []
 
     def save(self, commit=True):
-        instance = super().save(commit=commit)
+        # Use commit=False to prevent ModelForm._save_m2m() from calling
+        # group.permissions.set() / user_set.set() — both read back current
+        # members via cross-join queries that gcloudc doesn't support.
+        instance = super().save(commit=False)
+        if instance.pk is None:
+            _assign_safe_pk(instance)
         instance.save()
 
-        self.instance.user_set.set(self.cleaned_data["users"])
-        self.save_m2m()
+        # Replace M2M sets via junction table (delete + bulk_create) to avoid
+        # cross-join reads in Firestore.
+        _set_m2m_via_junction(
+            User.groups.through, "user_id", "group_id",
+            self.cleaned_data["users"], instance.pk,
+        )
+        _set_m2m_via_junction(
+            Group.permissions.through, "permission_id", "group_id",
+            self.cleaned_data["permissions"], instance.pk,
+        )
+
+        # commit=False causes Django to set self.save_m2m = self._save_m2m so
+        # the admin's save_related() can call it later.  We've already handled
+        # M2M above, so replace it with a no-op to prevent a second (broken)
+        # cross-join attempt.
+        self.save_m2m = lambda: None
 
         return instance
 
@@ -56,6 +117,31 @@ class KiwiUserAdmin(UserAdmin):
         "last_login",
     )
     ordering = ["-pk"]  # same as -date_joined
+
+    def get_queryset(self, request):
+        # Exclude users with Firestore auto-generated large PKs (data corruption).
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
+    def save_model(self, request, obj, form, change):
+        if not change and obj.pk is None:
+            _assign_safe_pk(obj)
+        super().save_model(request, obj, form, change)
+
+    def save_related(self, request, form, formsets, change):
+        # Handle User M2M (groups, user_permissions) via junction tables to
+        # avoid cross-join reads that gcloudc doesn't support.
+        if "groups" in form.cleaned_data:
+            _set_m2m_via_junction(
+                User.groups.through, "group_id", "user_id",
+                form.cleaned_data["groups"], form.instance.pk,
+            )
+        if "user_permissions" in form.cleaned_data:
+            _set_m2m_via_junction(
+                User.user_permissions.through, "permission_id", "user_id",
+                form.cleaned_data["user_permissions"], form.instance.pk,
+            )
+        form.save_m2m = lambda: None  # already handled above; prevent cross-join
+        super().save_related(request, form, formsets, change)
 
     @admin.action(
         permissions=["change"],
@@ -239,6 +325,11 @@ class KiwiUserAdmin(UserAdmin):
 
 class KiwiGroupAdmin(GroupAdmin):
     form = GroupAdminForm
+
+    def get_queryset(self, request):
+        # Exclude groups with Firestore auto-generated large PKs (data corruption).
+        # Safe PKs are in [1, 2^31-1]; corrupted ones exceed 2^53.
+        return super().get_queryset(request).filter(pk__lt=2**31)
 
     def has_delete_permission(self, request, obj=None):
         if obj and obj.name in ["Tester", "Administrator"]:

@@ -47,8 +47,6 @@ def history_email_for(instance, title):
     Generate the subject and email body that is sent via
     email notifications post update!
     """
-    history = instance.history.latest()
-
     subject = _("UPDATE: %(model_name)s #%(pk)d - %(title)s") % {
         "model_name": instance.__class__.__name__,
         "pk": instance.pk,
@@ -56,6 +54,15 @@ def history_email_for(instance, title):
     }
     # no multi-line email headers
     subject = subject.replace("\n", " ").replace("\r", " ")
+
+    try:
+        history = instance.history.latest()
+        history_date = history.history_date.strftime("%c")
+        username = getattr(history.history_user, "username", "")
+        diff = history.history_change_reason
+    except Exception:
+        # Firestore composite index may not exist yet for this historical model.
+        history_date = username = diff = ""
 
     body = (
         _(
@@ -68,9 +75,9 @@ For more information:
 %(instance_url)s"""
         )
         % {
-            "history_date": history.history_date.strftime("%c"),
-            "username": getattr(history.history_user, "username", ""),
-            "diff": history.history_change_reason,
+            "history_date": history_date,
+            "username": username,
+            "diff": diff,
             "instance_url": instance.get_full_url(),
         }
     )

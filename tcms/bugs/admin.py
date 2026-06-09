@@ -11,6 +11,9 @@ from tcms.core.history import ReadOnlyHistoryAdmin
 
 
 class BugAdmin(ObjectPermissionsAdminMixin, ReadOnlyHistoryAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
+
     def add_view(self, request, form_url="", extra_context=None):
         return HttpResponseRedirect(reverse("bugs-new"))
 
@@ -19,6 +22,8 @@ class BugAdmin(ObjectPermissionsAdminMixin, ReadOnlyHistoryAdmin):
 
 
 class SeverityAdmin(admin.ModelAdmin):
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(pk__lt=2**31)
     list_display = ("id", "visual_icon", "name", "colored_color", "weight")
     ordering = ["-weight"]
 

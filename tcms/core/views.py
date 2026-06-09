@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.sites.models import Site
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.db.migrations.executor import MigrationExecutor
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.http import HttpResponseRedirect, StreamingHttpResponse
 from django.template import loader
 from django.urls import reverse
@@ -26,7 +26,7 @@ from django.views.generic.base import TemplateView, View
 from tcms.dao.testplans.test_plan_dao import test_plan_dao
 from tcms.dao.testruns.test_run_dao import test_run_dao
 from tcms.testplans.models import TestPlan
-from tcms.testruns.models import TestRun
+from tcms.testruns.models import TestExecution, TestRun
 
 
 @method_decorator(login_required, name="dispatch")
@@ -40,7 +40,7 @@ class DashboardView(TemplateView):  # pylint: disable=missing-permission-require
             "https://kiwitcms.readthedocs.io/en/latest/installing_docker.html"
             "#configuration-of-kiwi-tcms-domain"
         )
-        if site.domain == "127.0.0.1:8000":
+        if not settings.DEBUG and site.domain == "127.0.0.1:8000":
             messages.add_message(
                 self.request,
                 messages.ERROR,
@@ -100,33 +100,53 @@ class DashboardView(TemplateView):  # pylint: disable=missing-permission-require
                 ),
             )
 
-        # List all recent TestPlans and TestRuns
-        test_plans = (
-            test_plan_dao.filter_objects(author=self.request.user)
-            .order_by("-pk")
-            .select_related("product", "type")
-            .annotate(num_runs=Count("run", distinct=True))
+        # List all recent TestPlans — avoid select_related/annotate (no JOINs in Firestore)
+        all_plans = list(
+            test_plan_dao.filter_objects(author=self.request.user).order_by("-pk")
         )
-        test_plans_disable_count = test_plans.filter(is_active=False).count()
+        test_plans_count = len(all_plans)
+        test_plans_disable_count = sum(1 for p in all_plans if not p.is_active)
+        active_plans = [p for p in all_plans if p.is_active][:15]
+        # Attach run count per plan without annotation (avoids cross-join)
+        for plan in active_plans:
+            plan.num_runs = TestRun.objects.filter(plan_id=plan.pk).count()
 
-        # pylint: disable=unsupported-binary-operation
-        test_runs = (
-            test_run_dao.filter_objects(
-                Q(manager=self.request.user)
-                | Q(default_tester=self.request.user)
-                | Q(executions__assignee=self.request.user),
-                stop_date__isnull=True,
-            )
-            .order_by("-pk")
-            .distinct()
+        # List TestRuns — split OR+cross-join into separate simple queries
+        user = self.request.user
+        manager_ids = set(
+            TestRun.objects.filter(manager=user, stop_date__isnull=True)
+            .values_list("pk", flat=True)
         )
+        tester_ids = set(
+            TestRun.objects.filter(default_tester=user, stop_date__isnull=True)
+            .values_list("pk", flat=True)
+        )
+        # executions__assignee: look up executions first, then their runs
+        exec_run_ids = set(
+            TestExecution.objects.filter(assignee=user).values_list("run_id", flat=True)
+        )
+        if exec_run_ids:
+            exec_run_ids_list = list(exec_run_ids)
+            open_exec_run_ids = set()
+            for i in range(0, len(exec_run_ids_list), 90):
+                chunk = exec_run_ids_list[i:i + 90]
+                open_exec_run_ids.update(
+                    TestRun.objects.filter(pk__in=chunk, stop_date__isnull=True)
+                    .values_list("pk", flat=True)
+                )
+        else:
+            open_exec_run_ids = set()
+
+        all_run_ids = sorted(manager_ids | tester_ids | open_exec_run_ids, reverse=True)
+        test_runs_count = len(all_run_ids)
+        last_15_test_runs = [TestRun.objects.get(pk=pk) for pk in all_run_ids[:15]]
 
         return {
-            "test_plans_count": test_plans.count(),
+            "test_plans_count": test_plans_count,
             "test_plans_disable_count": test_plans_disable_count,
-            "last_15_test_plans": test_plans.filter(is_active=True)[:15],
-            "last_15_test_runs": test_runs[:15],
-            "test_runs_count": test_runs.count(),
+            "last_15_test_plans": active_plans,
+            "last_15_test_runs": last_15_test_runs,
+            "test_runs_count": test_runs_count,
         }
 
 

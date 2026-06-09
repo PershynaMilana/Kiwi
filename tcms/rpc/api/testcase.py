@@ -8,10 +8,8 @@ from tcms.dao.management.component_dao import component_dao
 from tcms.dao.shared.attachment_dao import attachment_dao
 from tcms.dao.shared.comment_dao import comment_dao
 from tcms.dao.shared.property_dao import testcase_property_dao
-from tcms.dao.firestore.firestore_tag_dao import firestore_tag_dao
 from tcms.dao.shared.tag_dao import tag_dao
 from tcms.dao.testcases.test_case_dao import test_case_dao
-from tcms.dao.firestore.firestore_test_case_dao import firestore_test_case_dao
 from tcms.dao.user_dao import user_dao
 from tcms.rpc.api.forms.testcase import NewForm, UpdateForm
 from tcms.rpc.decorators import permissions_required
@@ -180,7 +178,6 @@ def add_tag(case_id, tag, **kwargs):
     tag_obj, _ = tag_dao.get_or_create(request.user, tag)
     case = test_case_dao.get_by_id(case_id)
     tag_dao.add_tag(case, tag_obj)
-    firestore_tag_dao.add_tag(case, tag_obj)
 
 
 @permissions_required("testcases.delete_testcasetag")
@@ -201,7 +198,6 @@ def remove_tag(case_id, tag):
     tag_obj = tag_dao.get_by_name(tag)
     case = test_case_dao.get_by_id(case_id)
     tag_dao.remove_tag(case, tag_obj)
-    firestore_tag_dao.remove_tag(case, tag_obj)
 
 
 @permissions_required("testcases.add_testcase")
@@ -248,7 +244,6 @@ def create(values, **kwargs):
             test_case.save()
 
         test_case_dao.save(test_case)
-        firestore_test_case_dao.save(test_case)
         result = model_to_dict(test_case, exclude=["component", "plan", "tag"])
         # b/c date is added in the DB layer and model_to_dict() doesn't return it
         result["create_date"] = test_case.create_date
@@ -276,7 +271,7 @@ def filter(query=None):  # pylint: disable=redefined-builtin
     if query is None:
         query = {}
 
-    return firestore_test_case_dao.filter(query)
+    return test_case_dao.filter(query)
 
 
 @permissions_required("testcases.view_testcase")
@@ -346,7 +341,6 @@ def update(case_id, values):
     if form.is_valid():
         test_case = form.save()
         test_case_dao.save(test_case)
-        firestore_test_case_dao.save(test_case)
         result = model_to_dict(test_case, exclude=["component", "plan", "tag"])
         # b/c date may be None and model_to_dict() doesn't return it
         result["create_date"] = test_case.create_date
@@ -543,7 +537,7 @@ def properties(query=None):
     return testcase_property_dao.filter(
         query,
         value_fields=("id", "case", "name", "value"),
-        order_by=("case", "name", "value"),
+        order_by=("case_id", "name", "value"),
     )
 
 

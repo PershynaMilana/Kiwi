@@ -10,15 +10,15 @@ from .common import *  # noqa: F403
 # Debug settings
 DEBUG = True
 
-# Database settings
+# Use Firestore-compatible DAOs (gcloudc ORM with chunking, no related ordering, etc.)
+USE_FIRESTORE_DAOS = True
+
+# Database settings — Firestore Native Mode via django-gcloud-connectors
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": str(TEMP_DIR / "kiwi.devel.sqlite"),  # noqa: F405
-        "USER": "root",
-        "PASSWORD": "",  # nosec:B105:hardcoded_password_string
-        "HOST": "",
-        "PORT": "",
+        "ENGINE": "gcloudc.db.backends.firestore",
+        "PROJECT": "kiwi-tcms-d90e9",
+        "INDEXES_FILE": os.path.join(TCMS_ROOT_PATH, "..", "firestore.indexes.yaml"),  # noqa: F405
     }
 }
 
@@ -46,6 +46,16 @@ STORAGES["staticfiles"][  # noqa: F405
 ] = "tcms.tests.storage.RaiseWhenFileNotFound"
 
 ANONYMOUS_ANALYTICS = False
+
+# gcloudc has a timezone-naive/aware comparison bug in session queries — use file sessions instead
+SESSION_ENGINE = "django.contrib.sessions.backends.file"
+
+# Skip gcloudc's index-coverage check for third-party models whose fields
+# we cannot annotate with db_index=True.  Firestore indexes all fields by
+# default, so these queries work fine at the database level.
+GCLOUDC_EXCLUDE_FROM_INDEX_CHECKS = [
+    "django_comments.Comment",
+]
 
 # Firestore credentials — point to your Firebase service account JSON key.
 # Download from: Firebase Console → Project Settings → Service Accounts → Generate new private key

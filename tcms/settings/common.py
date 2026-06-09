@@ -189,7 +189,6 @@ STATIC_ROOT = "/Kiwi/static/"
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
-    "guardian.backends.ObjectPermissionBackend",
 ]
 
 
@@ -344,7 +343,6 @@ WSGI_APPLICATION = "tcms.wsgi.application"
 # this is consumed by kiwitcms-tenants/django-tenants
 TENANT_APPS = [
     "django.contrib.sites",
-    "guardian",
     "django_comments",
     "modernrpc",
     "simple_history",

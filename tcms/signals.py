@@ -166,7 +166,15 @@ def handle_emails_post_plan_save(sender, instance, created=False, **kwargs):
     if not created and instance.emailing.notify_on_plan_update:
         from tcms.testplans.helpers import email
 
-        email.email_plan_update(instance)
+        try:
+            email.email_plan_update(instance)
+        except Exception:  # pylint: disable=broad-except
+            # Never let an email failure crash the plan save (e.g. missing
+            # Firestore composite index on testplans_historicaltestplan).
+            import logging
+            logging.getLogger(__name__).exception(
+                "Failed to send plan-update email for plan #%s", instance.pk
+            )
 
 
 def handle_emails_post_run_save(sender, *_args, **kwargs):
@@ -192,7 +200,13 @@ def handle_emails_post_run_save(sender, *_args, **kwargs):
         template_name = None
         subject, context = history_email_for(instance, instance.summary)
 
-    mailto(template_name, subject, instance.get_notify_addrs(), context)
+    try:
+        mailto(template_name, subject, instance.get_notify_addrs(), context)
+    except Exception:  # pylint: disable=broad-except
+        import logging
+        logging.getLogger(__name__).exception(
+            "Failed to send run-save email for run #%s", instance.pk
+        )
 
 
 def handle_attachments_pre_delete(sender, **kwargs):
@@ -235,13 +249,22 @@ def handle_emails_post_bug_save(sender, instance, created=False, **kwargs):
     if not kwargs.get("called_from_add_comment"):
         return
 
+    from django.contrib.auth import get_user_model
     from tcms.core.helpers.comments import get_comments
     from tcms.core.utils.mailto import mailto
 
+    User = get_user_model()
     comments = get_comments(instance)
-    recipients = set(
-        comments.filter(user__is_active=True).values_list("user__email", flat=True)
-    )
+
+    # Avoid cross-join: get user_ids from Comment (single collection), then
+    # look up active users' emails from User (single collection).
+    user_ids = [uid for uid in comments.values_list("user_id", flat=True) if uid is not None]
+    if user_ids:
+        recipients = set(
+            User.objects.filter(pk__in=user_ids, is_active=True).values_list("email", flat=True)
+        )
+    else:
+        recipients = set()
 
     if instance.reporter and instance.reporter.is_active:
         recipients.add(instance.reporter.email)

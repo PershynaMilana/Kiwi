@@ -5,15 +5,13 @@ from django.db import migrations
 
 def forwards_add_initial_data(apps, schema_editor):
     group_model = apps.get_model("auth", "Group")
-    group_model.objects.bulk_create(
-        [
-            group_model(name="Administrator"),
-            group_model(name="Tester"),
-        ]
-    )
+    group_model.objects.get_or_create(name="Administrator")
+    group_model.objects.get_or_create(name="Tester")
 
     site_model = apps.get_model("sites", "Site")
-    site_model.objects.create(name="localhost", domain="127.0.0.1:8000")
+    site_model.objects.get_or_create(
+        name="localhost", defaults={"domain": "127.0.0.1:8000"}
+    )
 
 
 def reverse_remove_initial_data(apps, schema_editor):
@@ -27,9 +25,10 @@ def reverse_remove_initial_data(apps, schema_editor):
 def forwards_add_default_perms(apps, schema_editor):
     group_model = apps.get_model("auth", "Group")
     permission_model = apps.get_model("auth", "Permission")
+    content_type_model = apps.get_model("contenttypes", "ContentType")
 
     admin = group_model.objects.get(name="Administrator")
-    all_perms = permission_model.objects.all()
+    all_perms = list(permission_model.objects.all())
     admin.permissions.add(*all_perms)
 
     tester = group_model.objects.get(name="Tester")
@@ -43,10 +42,16 @@ def forwards_add_default_perms(apps, schema_editor):
         "testplans",
         "testruns",
     ]:
-        app_perms = permission_model.objects.filter(
-            content_type__app_label__contains=app_name
+        ct_ids = list(
+            content_type_model.objects.filter(app_label=app_name).values_list(
+                "pk", flat=True
+            )
         )
-        tester.permissions.add(*app_perms)
+        if ct_ids:
+            app_perms = list(
+                permission_model.objects.filter(content_type_id__in=ct_ids)
+            )
+            tester.permissions.add(*app_perms)
 
 
 def reverse_remove_default_perms(apps, schema_editor):

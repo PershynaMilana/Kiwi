@@ -10,6 +10,7 @@ from tcms.testcases.models import (
     Category,
     TestCase,
     TestCaseEmailSettings,
+    TestCasePlan,
     TestCaseStatus,
 )
 from tcms.testplans.models import TestPlan
@@ -126,6 +127,10 @@ class CloneCaseForm(forms.Form):  # pylint: disable=must-inherit-from-model-form
     )
 
     def populate(self, case_ids):
+        case_ids = list(case_ids)
         self.fields["case"].queryset = TestCase.objects.filter(pk__in=case_ids)
-        plan_ids = self.fields["case"].queryset.values_list("plan", flat=True)
+        # Decompose M2M traversal (TestCase→TestCasePlan→TestPlan) — no JOINs in Firestore
+        plan_ids = list(
+            TestCasePlan.objects.filter(case_id__in=case_ids).values_list("plan_id", flat=True)
+        )
         self.fields["plan"].queryset = TestPlan.objects.filter(pk__in=plan_ids)
